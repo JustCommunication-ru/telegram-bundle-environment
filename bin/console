@@ -1,6 +1,7 @@
 #!/usr/bin/env php
 <?php
 
+//use JustCommunication\Telegram\Kernel;
 use App\Kernel;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 

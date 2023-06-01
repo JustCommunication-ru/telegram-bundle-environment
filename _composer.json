@@ -1,7 +1,7 @@
 {
-    "name": "justcommunication/telegram-bundle-environment",
+    "name": "justcommunication/telegram-sdk",
     "description": "Telegram sdk",
-    "type": "project",
+    "type": "library",
     "keywords": ["telegram","messages","notification"],
     "license": "proprietary",
     "minimum-stability": "stable",
@@ -14,7 +14,6 @@
         "doctrine/doctrine-bundle": "^2.9",
         "doctrine/doctrine-migrations-bundle": "^3.2",
         "doctrine/orm": "^2.15",
-        "justcommunication/telegram-bundle": "^0.0.1",
         "symfony/console": "6.3.*",
         "symfony/dotenv": "6.3.*",
         "symfony/flex": "^2",
@@ -22,10 +21,6 @@
         "symfony/runtime": "6.3.*",
         "symfony/yaml": "6.3.*"
     },
-    "repositories": [
-        {"type": "path",
-        "url":  "./bundle/Justcommunication/TelegramBundle"}
-    ],
     "config": {
         "allow-plugins": {
             "php-http/discovery": true,
@@ -36,12 +31,12 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "src/"
+            "JustCommunication\\Telegram\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "App\\Tests\\": "tests/"
+            "JustCommunication\\Telegram\\Tests\\": "tests/"
         }
     },
     "replace": {
