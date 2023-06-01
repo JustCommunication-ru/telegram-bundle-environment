@@ -1,0 +1,26 @@
+{
+    "name": "justcommunication/telegram-bundle",
+    "description": "Telegram bundle",
+    "version": "0.0.1",
+    "type": "library",
+    "keywords": ["telegram","messages","notification"],
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.1"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "JustCommunication\\TelegramBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JustCommunication\\TelegramBundle\\Tests\\": "tests/"
+        }
+    }
+}
