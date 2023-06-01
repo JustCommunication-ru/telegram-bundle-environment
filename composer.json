@@ -14,7 +14,6 @@
         "doctrine/doctrine-bundle": "^2.9",
         "doctrine/doctrine-migrations-bundle": "^3.2",
         "doctrine/orm": "^2.15",
-        "justcommunication/telegram-bundle": "^0.0.1",
         "symfony/console": "6.3.*",
         "symfony/dotenv": "6.3.*",
         "symfony/flex": "^2",
@@ -24,7 +23,7 @@
     },
     "repositories": [
         {"type": "path",
-        "url":  "./bundle/Justcommunication/TelegramBundle"}
+        "url":  "./bundles/JustCommunication/TelegramBundle"}
     ],
     "config": {
         "allow-plugins": {

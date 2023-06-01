@@ -1,5 +1,8 @@
 controllers:
     resource:
         path: ../src/Controller/
-        namespace: JustCommunication\Telegram\Controller
+        namespace: App\Controller
     type: attribute
+
+telegram_bundle:
+    resource: '@TelegramBundle/config/routes.yaml'
