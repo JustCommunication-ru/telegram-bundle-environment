@@ -2,7 +2,7 @@
     "name": "justcommunication/telegram-bundle",
     "description": "Telegram bundle",
     "version": "0.0.1",
-    "type": "library",
+    "type": "symfony-bundle",
     "keywords": ["telegram","messages","notification"],
     "license": "proprietary",
     "minimum-stability": "stable",

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    {% block metavar %}
+        <meta name="description" content="">
+        <meta name="keywords" content="">
+    {% endblock %}
+
+    <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    {#<link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">#}
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+
+    {% block stylesheets %}{% endblock %}
+
+</head>
+<body>
+
+<header class="header">
+
+</header>
+
+<main class="main">
+    {% block body %}{% endblock %}
+</main>
+
+<footer class="footer">
+
+</footer>
+
+{% block javascripts %}{% endblock %}
+
+</body>
+</html>

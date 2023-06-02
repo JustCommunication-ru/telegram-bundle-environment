@@ -10,6 +10,7 @@ class NewController extends AbstractController{
     #[Route('/telega')]
     public function index(){
 
-        return new Response('<h1>hello Telega</h1>');
+        //return new Response('<h1>hello Telega</h1>');
+        return $this->render('@Telegram/new/index.html.twig', ['raw'=>'<h1>hello Telega</h1>', 'APP_NAME'=>'sdfasdfs']);
     }
 }

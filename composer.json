@@ -20,16 +20,13 @@
         "symfony/flex": "^2",
         "symfony/framework-bundle": "6.3.*",
         "symfony/runtime": "6.3.*",
+        "symfony/twig-bundle": "6.3.*",
         "symfony/yaml": "6.3.*"
     },
     "repositories": [
         {
             "type": "path",
             "url":  "./bundles/JustCommunication/TelegramBundle"
-        },
-        {
-            "type": "path",
-            "url":  "./bundles/JustCommunication/SukBundle"
         }
     ],
     "config": {

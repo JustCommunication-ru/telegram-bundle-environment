@@ -6,3 +6,5 @@ controllers:
 
 telegram_bundle:
     resource: '@TelegramBundle/config/routes.yaml'
+    prefix: /telegram
+    name_prefix: telegram
