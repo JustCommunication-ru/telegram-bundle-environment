@@ -20,5 +20,7 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
+    JustCommunication\TelegramBundle\:
+        resource: '../bundles/JustCommunication/TelegramBundle/src/'
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

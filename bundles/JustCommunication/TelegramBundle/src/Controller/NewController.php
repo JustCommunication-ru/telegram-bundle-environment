@@ -10,6 +10,6 @@ class NewController extends AbstractController{
     #[Route('/telega')]
     public function index(){
 
-        return new Response('hello world');
+        return new Response('<h1>hello Telega</h1>');
     }
 }
