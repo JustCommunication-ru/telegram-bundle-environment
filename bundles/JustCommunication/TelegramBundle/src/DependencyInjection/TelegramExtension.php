@@ -28,6 +28,7 @@ class TelegramExtension extends Extension
             $config['my_param']
         );
 */
+        /*
         $definition = $container->getDefinition(NewController::class);
         $definition->setArguments([
             '$my_param' => $config['my_param'],

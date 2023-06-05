@@ -12,36 +12,101 @@ class Configuration implements ConfigurationInterface
     {
         // TODO: Implement getConfigTreeBuilder() method.
         $treeBuilder = new TreeBuilder('telegram');
-
         $treeBuilder->getRootNode()
+            ->arrayPrototype()
+            
+            /*
             ->children()
-                ->scalarNode('my_param')
-                    ->isRequired()
-                    ->info('Param pam pam')
-                    ->end()
-                ->arrayNode('arr')
-                    ->addDefaultsIfNotSet()
+                ->arrayNode('config')
+                    ->useAttributeAsKey('name')
+                    ->arrayPrototype()
                     ->children()
-                        ->integerNode('per_day')
-                            ->defaultValue(10)
-                            ->validate()
-                                ->ifTrue(function ($v) { return $v <= 0; })
-                                ->thenInvalid('Number must be positive')
-                            ->end()
-                        ->end()
-                        ->integerNode('per_month')
-                            ->defaultValue(100)
-                            ->validate()
-                                ->ifTrue(function ($v) { return $v <= 0; })
-                                ->thenInvalid('Number must be positive')
-                            ->end()
+                        ->integerNode('admin_chat_id')
                         ->end()
                     ->end()
                 ->end()
-            //->booleanNode('enable_soft_delete')->end()
             ->end()
+            */
+
+            ->children()
+            ->scalarNode('table')->end()
+            ->scalarNode('user')->end()
+            ->scalarNode('password')->end()
         ;
 
+
+/*
+        $treeBuilder->getRootNode()
+            ->children()
+                ->arrayNode('config')
+                    ->arrayPrototype()
+                        ->children()
+                            ->integerNode('admin_chat_id')
+                                ->isRequired()
+                                ->validate()
+                                    ->ifTrue(function ($v) { return $v <= 0; })
+                                    ->thenInvalid('admin_chat_id must be valid telegram chat id number')
+                                ->end()
+                                ->info('Telegram chat id of special super admin user')
+                            ->end()
+
+                            ->scalarNode('message_prefix')
+                                ->info('Telegram chat id of special admin user')
+                            ->end()
+
+                            ->scalarNode('bot_name')
+                                ->info('Name of bot which be shown in sms to user')
+                            ->end()
+
+                            ->scalarNode('url')
+                                ->info('Official telegram API url')
+                                ->isRequired()
+                                //->defaultValue('https://api.telegram.org/bot') надо ли?
+                            ->end()
+
+                            ->scalarNode('proxy')
+                                ->info('CURLOPT_PROXY value if needed')
+                            ->end()
+
+                            ->scalarNode('proxy_auth') // надо переименовать, что за auth блядь?
+                                ->info('CURLOPT_PROXYUSERPWD value if needed')
+                            ->end()
+
+                            ->scalarNode('token')
+                                ->info('Secret token to access bot by API')
+                            ->end()
+
+                            ->scalarNode('webhook')
+                                ->info('URL on project to process messages from API, by default it is "%env(APP_URL)%/telegram/webhook"')
+                                ->defaultValue('%env(APP_URL)%/telegram/webhook')
+                            ->end()
+
+                            ->scalarNode('user_link')
+                                ->info('URL for link project user to telegram user, by default it is  "%env(APP_URL)%/user/telegram/link/hashplace"')
+                                ->defaultValue('%env(APP_URL)%/user/telegram/link/hashplace')
+                            ->end()
+
+                            ->booleanNode('wrong_event_exception')
+                                ->info('Script will be fail if not existing event sent. This options something like strict mode')
+                                ->defaultTrue()
+                            ->end()
+
+                            ->booleanNode('markdown_checker')
+                                ->info('Force check and repair broken markdowns. It will be correct messages, but it will increase succesfull delivery')
+                                ->defaultTrue()
+                            ->end()
+
+                            ->booleanNode('length_checker')
+                                ->info('Cut to much long messages')
+                                ->defaultTrue()
+                            ->end()
+
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+        ;
+*/
         return $treeBuilder;
     }
 }

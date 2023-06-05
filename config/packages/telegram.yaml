@@ -1,2 +1,9 @@
 telegram:
-    my_param: "пакаждес-телеграм"
+    configdf:
+        table: symfony
+        user: root
+        password: ~
+    configdfa:
+        table: symfony
+        user: root
+        password: ~
