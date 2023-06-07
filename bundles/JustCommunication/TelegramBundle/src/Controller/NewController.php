@@ -4,7 +4,7 @@ namespace JustCommunication\TelegramBundle\Controller;
 
 use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
 use JustCommunication\TelegramBundle\Service\TelegramHelper;
-use JustCommunication\TelegramBundle\TelegramBundle;
+use JustCommunication\TelegramBundle\Trait\CacheTrait;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
@@ -13,14 +13,26 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class NewController extends AbstractController{
 
+
+    use CacheTrait;
+
     public $my_param;
     public function __construct($my_param='nothing')
     {
         $this->my_param=$my_param;
     }
 
+
+
     #[Route('/telega')]
     public function index(ParameterBagInterface $bag, TelegramHelper $telegramHelper, TelegramEventRepository $eventRepository){
+
+        //$x = $this->cached('telegram_event', function(){return 'AAA';}, true);
+
+
+        //$cache = $this->container->get('JustCommunication\TelegramBundle\Service\CacheHelper');
+
+        //dd($this->cache);
 
         //$arr = $bag->get('justcommunication.telegram.config');
         //var_dump($arr);
@@ -32,18 +44,36 @@ class NewController extends AbstractController{
 */
         //$telegramHelper->sendMessage('537830154', '\xE2\x80\xBC i che delat или не делать?');
 
-        //$x = $telegramHelper->getEvents(true);
+        $x = $telegramHelper->getUsers(true);
 
 
 
         //$x = $eventRepository->findAll();
 
-        $x = $eventRepository->getEvents();
 
+
+        //$x = $eventRepository->getEvents(true);
+
+        //$x = $this->number();
         var_dump($x);
 
 
         //return new Response('<h1>hello Telega</h1>');
         return $this->render('@Telegram/new/index.html.twig', ['raw'=>'<h1>hello Telega'.$this->my_param.'</h1>', 'APP_NAME'=>'sdfasdfs']);
     }
+
+
+    /*
+    function number1(#[Autowire(service: 'monolog.logger.request')]
+                    CacheInterface $cache){
+        return $cache;
+    }
+    */
+    /*
+    function number(#[Autowire(expression: 'service("JustCommunication\\TelegramBundle\\Service\\CacheHelper")')]
+                    CacheInterface $cache){
+        return $cache;
+    }
+    */
+
 }

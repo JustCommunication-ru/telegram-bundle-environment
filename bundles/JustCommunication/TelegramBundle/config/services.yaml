@@ -19,3 +19,5 @@ services:
     #JustCommunication\TelegramBundle\Controller\NewController:
     #    arguments:
     #        $my_param: '%justcommunication.telegram.pumpum%'
+
+    
