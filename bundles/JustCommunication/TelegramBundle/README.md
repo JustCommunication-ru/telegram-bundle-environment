@@ -31,3 +31,8 @@ doctrine:
 ```
 php bin/console make:entity --regenerate "App\Entity\NewsTop"
 ```
+
+
+
+Бандл использует стандартный security и расчитывает на то что в хост проекте есть \App\Entity\User у которого есть test/json поле roles.
+Поддерживает роли ROLE_ADMINISTRATOR, ROLE_SUPERUSER, ROLE_MANAGER и все остальные. При этом конвертирует их во внутренние Superuser, Manager и User соответственно. Вопрос зачем такие ограничения? надо просто пробрасывать роли как есть наверно

@@ -32,27 +32,25 @@ class TelegramUserRepository extends ServiceEntityRepository
 
     public function getUsers($force = false){
         $callback = function(){
-            $rows = $this->em->createQuery('
-                SELECT u 
-                FROM JustCommunication\TelegramBundle\Entity\TelegramUser u
-                ')->getArrayResult();
-            return $this->ss::array_foreach($rows, array('roles', 'note'), 'name');
 
-            $statement = $this->db->prepare('SELECT tu.user_chat_id, tu.datein, tu.is_bot, tu.first_name, tu.username, tu.language_code, tu.superuser, tu.phone, user.id as  id_user, user.roles 
-            FROM telegram_users tu 
-            LEFT JOIN user ON user.id=tu.id_user 
-            ORDER BY username ASC');
-            $result = $statement->executeQuery();
-            //$arr = FuncHelper::array_foreach($result->fetchAllAssociative(), true, 'user_chat_id');
+            $rows = $this->em->createQuery('
+                SELECT tu.id, tu.datein, tu.userChatId as user_chat_id, tu.firstName as first_name, tu.username, tu.superuser, tu.phone, tu.idUser as id_user, 
+                u.roles
+                FROM JustCommunication\TelegramBundle\Entity\TelegramUser tu
+                LEFT JOIN App\Entity\User u WITH tu.idUser=u.id
+                ')->getArrayResult();
+            //return $this->ss::array_foreach($rows, true, 'user_chat_id');
+            //return $rows;
+
             $arr = array();
-            foreach($result->fetchAllAssociative() as $row){
+            foreach($rows as $row){
                 if ($row['id_user']){
                     // Здесь надо user.roles превратить во вмеяемую role
-                    $roles = json_decode($row['roles'], true);
-                    $row['role']=in_array('ROLE_ADMINISTRATOR', $roles)||in_array('ROLE_SUPERUSER', $roles)
+
+                    $row['role']=in_array('ROLE_ADMINISTRATOR', $row['roles'])||in_array('ROLE_SUPERUSER', $row['roles'])
                         ?'Superuser'
                         :(
-                        in_array('ROLE_MANAGER', $roles)
+                        in_array('ROLE_MANAGER', $row['roles'])
                             ?'Manager'
                             :'User'
                         );
@@ -61,7 +59,7 @@ class TelegramUserRepository extends ServiceEntityRepository
                 }
                 $arr[$row['user_chat_id']]=$row;
             }
-
+            return $arr;
         };
         return $this->cached('telegram_event', $callback, $force);
     }

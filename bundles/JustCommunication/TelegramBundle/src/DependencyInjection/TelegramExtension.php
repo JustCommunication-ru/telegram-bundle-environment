@@ -22,7 +22,8 @@ class TelegramExtension extends Extension
 
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
-
+        //$x = $container->getParameter('doctrine.orm.security.user.provider.class');
+        //var_dump($container);
 
         // Превращаем конфиги из packages/telegram.yaml в параметры, которые можем вытащить через ParameterBagInterface
         $container->setParameter(
