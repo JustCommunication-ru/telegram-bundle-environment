@@ -6,7 +6,7 @@ namespace JustCommunication\TelegramBundle\Service;
 
 use Exception;
 
-class SSHelper
+class FuncHelper
 {
     /**
      * Проекция среза массива полей $val на поле $key

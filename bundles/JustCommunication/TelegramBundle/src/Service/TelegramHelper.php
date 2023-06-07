@@ -8,6 +8,7 @@ use JustCommunication\TelegramBundle\Repository\TelegramSaveRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
 use Doctrine\ORM\EntityManagerInterface;
+use JustCommunication\TelegramBundle\Repository\TelegramUserEventRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
@@ -33,6 +34,7 @@ class TelegramHelper
     public TelegramEventRepository $telegramEventRepository;
     public TelegramSaveRepository $telegramSaveRepository;
     public TelegramUserRepository $telegramUserRepository;
+    public TelegramUserEventRepository $telegramUserEventRepository;
     public $em;
 
     //public $add_reply_emoji="\xE2\x9C\x85 "; //WHITE SMALL SQUARE
@@ -53,6 +55,7 @@ class TelegramHelper
                                 TelegramEventRepository $telegramEventRepository,
                                 TelegramSaveRepository $telegramSaveRepository,
                                 TelegramUserRepository $telegramUserRepository,
+                                TelegramUserEventRepository $telegramUserEventRepository,
     )
     {
         $this->config = $params->get("justcommunication.telegram.config");
@@ -67,6 +70,7 @@ class TelegramHelper
         $this->telegramEventRepository = $telegramEventRepository;
         $this->telegramSaveRepository = $telegramSaveRepository;
         $this->telegramUserRepository = $telegramUserRepository;
+        $this->telegramUserEventRepository = $telegramUserEventRepository;
 
     }
 
@@ -492,25 +496,7 @@ dd([$origin_str, array_map(function($item) {
     */
 
 
-    /**
-     * Выборка подписки
-     * @param $user_chat_id
-     * @param $name
-     * @return false|array
-     * @throws Exception
-     * @throws \Doctrine\DBAL\Driver\Exception
-     */
-    public function getUserSubscribe($user_chat_id, $name){
-        $statement = $this->db->prepare('SELECT id, user_chat_id, name, active FROM telegram_users_list WHERE user_chat_id='.$user_chat_id.' AND name="'.$name.'"');
-        $result = $statement->executeQuery();
-        return $result->fetchAssociative(); // возвращаем одну строку если есть
-    }
 
-    public function getUserSubscribes($user_chat_id){
-        $statement = $this->db->prepare('SELECT id, user_chat_id, name, active, DATE_FORMAT(datein, "%d.%m.%Y") as datein FROM telegram_users_list WHERE user_chat_id='.$user_chat_id.' AND active="1"');
-        $result = $statement->executeQuery();
-        return $result->fetchAllAssociative(); // возвращаем все строки
-    }
 
     /**
      * Сменить флаг подписки
@@ -826,6 +812,24 @@ dd([$origin_str, array_map(function($item) {
     }
     public function getUsers($force=false){
         return $this->telegramUserRepository->getUsers($force);
+    }
+
+    /**
+     * Выборка подписки, она либо есть, либо ее нет
+     * @param $user_chat_id
+     * @param $name
+     * @return false|array
+     * @throws Exception
+     * @throws \Doctrine\DBAL\Driver\Exception
+     */
+    public function getUserEvent($user_chat_id, $event_name){
+        return $this->telegramUserEventRepository->getUserEvent($user_chat_id, $event_name);
+    }
+
+    public function getUserSubscribes($user_chat_id){
+        $statement = $this->db->prepare('SELECT id, user_chat_id, name, active, DATE_FORMAT(datein, "%d.%m.%Y") as datein FROM telegram_users_list WHERE user_chat_id='.$user_chat_id.' AND active="1"');
+        $result = $statement->executeQuery();
+        return $result->fetchAllAssociative(); // возвращаем все строки
     }
 
 

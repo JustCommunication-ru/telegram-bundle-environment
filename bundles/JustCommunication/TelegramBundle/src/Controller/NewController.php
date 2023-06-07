@@ -44,7 +44,7 @@ class NewController extends AbstractController{
 */
         //$telegramHelper->sendMessage('537830154', '\xE2\x80\xBC i che delat или не делать?');
 
-        $x = $telegramHelper->getUsers(true);
+        $x = $telegramHelper->getUserEvent(537830154, 'Error');
 
 
 
