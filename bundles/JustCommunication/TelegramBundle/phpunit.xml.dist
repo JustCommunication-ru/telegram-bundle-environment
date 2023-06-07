@@ -3,4 +3,9 @@
          backupGlobals="false"
          colors="true"
          bootstrap="./vendor/autoload.php"
-/>
+
+>
+    <php>
+        <env name="KERNEL_CLASS" value="JustCommunication\TelegramBundle\Kernel" />
+    </php>
+</phpunit>
