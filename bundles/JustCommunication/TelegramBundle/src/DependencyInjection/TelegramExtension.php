@@ -22,21 +22,20 @@ class TelegramExtension extends Extension
 
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
-/*
+
+
+        // Превращаем конфиги из packages/telegram.yaml в параметры, которые можем вытащить через ParameterBagInterface
         $container->setParameter(
-            'justcommunication.telegram.pumpum',
-            $config['my_param']
+            'justcommunication.telegram.config',
+            $config['config']
         );
-*/
+
+
         /*
         $definition = $container->getDefinition(NewController::class);
         $definition->setArguments([
             '$my_param' => $config['my_param'],
         ]);
-        $container->setParameter(
-            'arr',
-            $config['arr']
-        );
         //*/
     }
 }

@@ -12,41 +12,68 @@ class Configuration implements ConfigurationInterface
     {
         // TODO: Implement getConfigTreeBuilder() method.
         $treeBuilder = new TreeBuilder('telegram');
+/*
         $treeBuilder->getRootNode()
-            ->arrayPrototype()
+
             
-            /*
+
             ->children()
+                ->booleanNode('auto_connect')
+                ->defaultTrue()
+                ->end()
+                ->scalarNode('default_connection')
+                ->defaultValue('default')
+                ->end()
+
                 ->arrayNode('config')
-                    ->useAttributeAsKey('name')
-                    ->arrayPrototype()
+                    //->useAttributeAsKey('name')
+                    //->arrayPrototype()
                     ->children()
-                        ->integerNode('admin_chat_id')
+                        ->scalarNode('table')
                         ->end()
+
+
+                        //->scalarNode('admin_chat_id')
+                            ->variableNode('admin_chat_id')
+                        //->isRequired()
+                        ->info('Telegram chat id of special super admin user')
+                        ->end()
+
+            ->scalarNode('message_prefix')
+            ->info('Telegram chat id of special admin user')
+            ->end()
+
+
                     ->end()
                 ->end()
-            ->end()
-            */
 
+            ->end()
+*/
+/*
+            ->arrayPrototype()
             ->children()
             ->scalarNode('table')->end()
             ->scalarNode('user')->end()
             ->scalarNode('password')->end()
+            */
         ;
 
 
-/*
+
         $treeBuilder->getRootNode()
             ->children()
+                ->scalarNode('some_param')
+                ->end()
                 ->arrayNode('config')
-                    ->arrayPrototype()
                         ->children()
                             ->integerNode('admin_chat_id')
                                 ->isRequired()
+            /*
                                 ->validate()
                                     ->ifTrue(function ($v) { return $v <= 0; })
                                     ->thenInvalid('admin_chat_id must be valid telegram chat id number')
                                 ->end()
+            */
                                 ->info('Telegram chat id of special super admin user')
                             ->end()
 
@@ -102,11 +129,11 @@ class Configuration implements ConfigurationInterface
                             ->end()
 
                         ->end()
-                    ->end()
+                    //->end()
                 ->end()
             ->end()
         ;
-*/
+
         return $treeBuilder;
     }
 }

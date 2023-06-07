@@ -1,9 +1,14 @@
 telegram:
-    configdf:
-        table: symfony
-        user: root
-        password: ~
-    configdfa:
-        table: symfony
-        user: root
-        password: ~
+    config:
+        admin_chat_id: '%env(int:TELEGRAM_ADMIN_CHAT_ID)%' #номер особого пользователя для логов об ошибках и т.д.
+        message_prefix: ''
+        bot_name: "%env(MODULES_TELEGRAM_BOT_NAME)%" # Сюда следует указать имя своего бота (отправляется в смс пользователю!)
+        url: "https://api.telegram.org/bot"
+        proxy: ""
+        proxy_auth: "" #login:pass
+        token: "%env(MODULES_TELEGRAM_TOKEN)%"
+        webhook: "%env(APP_URL)%/telegram/webhook"
+        user_link: "%env(APP_URL)%/user/telegram/link/hashplace" # hashplace заменяется на реальный хэш
+        wrong_event_exception: true # ронять скрипты при попытке отправить несуществующий event, можно считать эту опцию strict mode
+        markdown_checker: true # форматирование сообщения (умное исправление markdown и т.д. мероприятия нацеленные на 100% доставку сообщения)
+        length_checker: false # обрезание по длине
