@@ -1,2 +1,17 @@
+# Чтобы работали тесты нужны конфиги, их можно настраивать в самих тестах, но с другой стороны здесь приведен рабочий конфиг
+# который должен быть на хост-проекте
+# При использовании в качестве бандла этот файл НЕ ИСПОЛЬЗУЕТСЯ!
 telegram:
-    my_param: "дефольт-тестинг"
+    config:
+        admin_chat_id: '%env(int:JC_TELEGRAM_ADMIN_CHAT_ID)%' #номер особого пользователя для логов об ошибках и т.д.
+        message_prefix: ''
+        bot_name: "%env(JC_TELEGRAM_BOT_NAME)%" # Сюда следует указать имя своего бота (отправляется в смс пользователю!)
+        url: "https://api.telegram.org/bot"
+        proxy: ""
+        proxy_auth: "" #login:pass
+        token: "%env(JC_TELEGRAM_TOKEN)%"
+        webhook: "%env(APP_URL)%/telegram/webhook"
+        user_link: "%env(APP_URL)%/user/telegram/link/hashplace" # hashplace заменяется на реальный хэш
+        wrong_event_exception: true # ронять скрипты при попытке отправить несуществующий event, можно считать эту опцию strict mode
+        markdown_checker: true # форматирование сообщения (умное исправление markdown и т.д. мероприятия нацеленные на 100% доставку сообщения)
+        length_checker: false # обрезание по длине

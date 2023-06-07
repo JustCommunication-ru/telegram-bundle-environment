@@ -59,7 +59,7 @@ class TelegramHelper
     {
         $this->config = $params->get("justcommunication.telegram.config");
         if (!$this->config['token']){
-            throw new \Exception('Telegram token not set in .env.*', 1);
+            throw new \Exception('Telegram token const not set in .env.local [JC_TELEGRAM_TOKEN]', 1);
         }
         $this->db = $connection;
         $this->cache = $cacheHelper->getCache();

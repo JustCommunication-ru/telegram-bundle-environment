@@ -6,12 +6,34 @@ composer require symfony/maker-bundle --dev
 создание composer.json
 *Автолоад переписать на "JustCommunication\\Telegram\\": "src/", Изменить в Kernel, bin/console, src/index.php
 
-php bin/console doctrine:database:create
+
+
+
+#ЗАПУСК ПРОЕКТА
+
+Запустить `composer update`
+
+Настроить .env.local
+1) подключение к бд `DATABASE_URL`
+2) Настройки подключения к телеграму `JC_TELEGRAM__*` Как создать бота отдельная тема.
+
+
+Если база данных в проекте отсутствует, то выполнить (будет создана telegram):
+
+```php bin/console doctrine:database:create```
+
+```php bin/console doctrine:migration:migrate```
+
+Установка config/packages/telegram.yaml
+```php bin/console jc:telegram:install```
+
+
+Нужно переписать InstalCommand
+
 
 config/packages/doctrine.yaml
 
 php bin/console make:migration
-
 
 Настроить в `/.devilbox/apache24.yml` правильный DocumentRoot
 
@@ -31,7 +53,8 @@ doctrine:
 ```
 php bin/console make:entity --regenerate "App\Entity\NewsTop"
 ```
-
+Тесты запускать из бандла
+php vendor/bin/simple-phpunit tests
 
 
 Бандл использует стандартный security и расчитывает на то что в хост проекте есть \App\Entity\User у которого есть test/json поле roles.
