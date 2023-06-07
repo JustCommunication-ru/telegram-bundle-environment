@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Service\Telegram;
+namespace JustCommunication\TelegramBundle\Service\Telegram;
 
 use JustCommunication\TelegramBundle\Repository\UserRepository;
 use JustCommunication\TelegramBundle\Service\FuncHelper;

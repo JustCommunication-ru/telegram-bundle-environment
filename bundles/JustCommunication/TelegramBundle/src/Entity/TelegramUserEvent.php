@@ -7,7 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * TelegramUsersEvents
  * Подписки пользователей
- * @ORM\Table(name="telegram_user_event", indexes={@ORM\Index(name="user_chat_id", columns={"user_chat_id"}), @ORM\Index(name="code", columns={"name"})})
+ * @ORM\Table(name="telegram_user_event", indexes={@ORM\Index(name="user_chat_id", columns={"user_chat_id"}), @ORM\Index(name="code", columns={"name"})}, uniqueConstraints={@ORM\UniqueConstraint(name="user_event", columns={"user_chat_id", "name"})})
  * @ORM\Entity
  */
 class TelegramUserEvent

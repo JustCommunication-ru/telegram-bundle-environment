@@ -49,7 +49,6 @@ class TelegramHelper
 
     public function __construct(ParameterBagInterface $params, Connection $connection,
                                 CacheHelper $cacheHelper, LoggerInterface $logger,
-                                EntityManagerInterface $em,
 
 
                                 TelegramEventRepository $telegramEventRepository,
@@ -65,7 +64,6 @@ class TelegramHelper
         $this->db = $connection;
         $this->cache = $cacheHelper->getCache();
         $this->logger = $logger;
-        $this->em = $em;
 
         $this->telegramEventRepository = $telegramEventRepository;
         $this->telegramSaveRepository = $telegramSaveRepository;
@@ -148,14 +146,16 @@ class TelegramHelper
 
         if ($teleSave && isset($params['add_text']) && $params['add_text']!=''){
             // Изменяем начальное сообщение
-            //$teleSave->setMess($teleSave->getMess()."\r\n[__________________________________]\r\n".$params['add_text']);
-            $teleSave->setMess($teleSave->getMess()."\r\n".$this->add_reply_emoji.$params['add_text']);
+
+            $teleSave = $this->telegramSaveRepository->updateMess($teleSave, $teleSave->getMess()."\r\n".$this->add_reply_emoji.$params['add_text']);
+
             $pre_ans = $this->sendMess($chat_id, [
                 'message_id'=>$teleSave->getMessageId(),
                 'text'=>$teleSave->getMess()
             ], 'editMessageText');
-            $this->em->persist($teleSave);
-            $this->em->flush();
+
+
+
             // Делаем новое сообщение ответом на предыдущее
             $data['reply_to_message_id']=$teleSave->getMessageId();
         }
@@ -166,15 +166,8 @@ class TelegramHelper
             // Если была инструкция сохранить сообщение по идентом
             if (isset($params['save_id'])){
                 // Если надо сохраняем каждое отправленное сообщение отдельно, пусть орм подавится.
-                $teleSaveAns = new TelegramSave();
-                $teleSaveAns->setDatein(new \DateTime)
-                    ->setIdent($params['save_id'])
-                    ->setMessageId($ans['result']['message_id'])
-                    ->setUserChatId($ans['result']['chat']['id'])//$row['user_chat_id']
-                    ->setMess($mess);
-                //->setMess($ans['result']['text']);
-                $this->em->persist($teleSaveAns);
-                $this->em->flush();
+                $this->telegramSaveRepository->new($params['save_id'], $ans['result']['chat']['id'], $ans['result']['message_id'], $mess);
+
 
                 $this->logger->debug('TelegramSave by ident: '.$params['save_id'].' for: '.$chat_id);
             }
@@ -465,52 +458,8 @@ dd([$origin_str, array_map(function($item) {
     //------------------------------------------------------------------------------------------------------------------
 
 
-    /**
-     * Список подписок (для event)
-     * @param bool $force
-     * @return array
-     * @throws InvalidArgumentException
-     */
-    /*
-    public function getEvents($force=false): array{
-
-        $cache_name= 'telegram_event';
-        if ($force) {
-            $this->cache->delete($cache_name);
-        }
-        return $this->cache->get($cache_name, function (ItemInterface $item) {
-            //$item->expiresAfter(3600);
-            //$item->set($computedValue);
-            $statement = $this->db->prepare('SELECT name, note, roles FROM telegram_event');
-            $result = $statement->executeQuery();
-            $rows = $result->fetchAllAssociative();
-
-            $arr = array();
-            foreach($rows as $row){
-                $roles = json_decode($row['roles'], true);
-                $arr[$row['name']] = array('note'=> $row['note'], 'roles'=>$roles);
-            }
-            return $arr;
-        });
-    }
-    */
 
 
-
-
-    /**
-     * Сменить флаг подписки
-     * @param $user_chat_id
-     * @param $name
-     * @param $active
-     * @return $this
-     * @throws Exception
-     */
-    public function updateUserSubscribe($user_chat_id, $name, $active){
-        $this->db->executeStatement('UPDATE telegram_users_list SET active=? WHERE user_chat_id=? AND name=?',
-            array_values(array('active'=>$active, 'user_chat_id'=>$user_chat_id, 'name'=>$name)));
-        return $this;
-    }
 
     /*
      * Подписываем пользователя на подписку
@@ -589,13 +538,11 @@ dd([$origin_str, array_map(function($item) {
                     if (isset($teleSavesMap[$row['user_chat_id']]) && isset($params['add_text']) && $params['add_text']!=''){
                         // Изменяем начальное сообщение
                         //$teleSavesMap[$row['user_chat_id']]->setMess($teleSavesMap[$row['user_chat_id']]->getMess()."\r\n[__________________________________]\r\n".$params['add_text']);
-                        $teleSavesMap[$row['user_chat_id']]->setMess($teleSavesMap[$row['user_chat_id']]->getMess()."\r\n".$this->add_reply_emoji.$params['add_text']);
+                        $teleSavesMap[$row['user_chat_id']] = $this->telegramSaveRepository->updateMess($teleSavesMap[$row['user_chat_id']], $teleSavesMap[$row['user_chat_id']]->getMess()."\r\n".$this->add_reply_emoji.$params['add_text']);
                         $pre_ans = $this->sendMess($row['user_chat_id'], array_merge($data, [
                             'message_id'=>$teleSavesMap[$row['user_chat_id']]->getMessageId(),
                             'text'=>$teleSavesMap[$row['user_chat_id']]->getMess()
                         ]), 'editMessageText');
-                        $this->em->persist($teleSavesMap[$row['user_chat_id']]);
-                        $this->em->flush();
 
                     }
                     // Не важно изменяли прошлое или нет, на него надо сослаться
@@ -622,15 +569,7 @@ dd([$origin_str, array_map(function($item) {
                         // Если была инструкция сохранить сообщение под идентом
                         if (isset($params['save_id'])){
                             // Если надо сохраняем каждое отправленное сообщение отдельно, пусть орм подавится.
-                            $teleSave = new TelegramSave();
-                            $teleSave->setDatein(new \DateTime)
-                                ->setIdent($params['save_id'])
-                                ->setMessageId($ans['result']['message_id'])
-                                ->setUserChatId($ans['result']['chat']['id'])//$row['user_chat_id']
-                                ->setMess($mess);
-                                //->setMess($ans['result']['text']);
-                            $this->em->persist($teleSave);
-                            $this->em->flush();
+                            $this->telegramSaveRepository->new($params['save_id'], $ans['result']['chat']['id'], $ans['result']['message_id'], $mess);
 
                             $this->logger->debug('TelegramSave by ident: '.$params['save_id'].' for: '.$row['user_chat_id']);
                         }
@@ -826,10 +765,20 @@ dd([$origin_str, array_map(function($item) {
         return $this->telegramUserEventRepository->getUserEvent($user_chat_id, $event_name);
     }
 
-    public function getUserSubscribes($user_chat_id){
-        $statement = $this->db->prepare('SELECT id, user_chat_id, name, active, DATE_FORMAT(datein, "%d.%m.%Y") as datein FROM telegram_users_list WHERE user_chat_id='.$user_chat_id.' AND active="1"');
-        $result = $statement->executeQuery();
-        return $result->fetchAllAssociative(); // возвращаем все строки
+    public function getUserEvents($user_chat_id){
+        return $this->telegramUserEventRepository->getUserEvents($user_chat_id);
+    }
+
+    /**
+     * Сменить флаг подписки
+     * @param $user_chat_id
+     * @param $name
+     * @param $active
+     * @return $this
+     * @throws Exception
+     */
+    public function setActive($user_chat_id, $event_name, $active){
+        return $this->telegramUserEventRepository->setActive($user_chat_id, $event_name, $active);
     }
 
 

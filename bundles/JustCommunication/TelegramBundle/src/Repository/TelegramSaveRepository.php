@@ -24,4 +24,24 @@ class TelegramSaveRepository extends ServiceEntityRepository
         $this->logger = $logger;
         $this->em = $em;
     }
+
+    public function updateMess(TelegramSave $teleSave, $mess): TelegramSave{
+        $teleSave->setMess($mess);
+        $this->em->persist($teleSave);
+        $this->em->flush();
+        return $teleSave;
+    }
+
+    public function new(string $ident, int $chat_id, int $message_id, $mess): TelegramSave{
+        $teleSave = new TelegramSave();
+        $teleSave->setDatein(new \DateTime)
+            ->setIdent($ident)
+            ->setUserChatId($chat_id)
+            ->setMessageId($message_id)
+            ->setMess($mess);
+        //->setMess($ans['result']['text']);
+        $this->em->persist($teleSave);
+        $this->em->flush();
+        return $teleSave;
+    }
 }

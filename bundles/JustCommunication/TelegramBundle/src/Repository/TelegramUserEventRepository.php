@@ -33,10 +33,36 @@ class TelegramUserEventRepository extends ServiceEntityRepository
     public function getUserEvent($user_chat_id, $event_name){
         $rows = $this->em->createQuery('
             SELECT ue FROM JustCommunication\TelegramBundle\Entity\TelegramUserEvent ue
-            WHERE ue.userChatId=:userChatId
+            WHERE ue.userChatId=:userChatId AND ue.name=:event_name
             ')
-            ->setParameter('userChatId', $user_chat_id)->getArrayResult();
+            ->setParameter('userChatId', $user_chat_id)
+            ->setParameter('event_name', $event_name)
+            ->getArrayResult();
         return $rows;
     }
+
+    public function getUserEvents($user_chat_id){
+        $rows = $this->em->createQuery('
+            SELECT ue FROM JustCommunication\TelegramBundle\Entity\TelegramUserEvent ue
+            WHERE ue.userChatId=:userChatId AND ue.active=1
+            ')
+            ->setParameter('userChatId', $user_chat_id)
+            ->getArrayResult();
+        return $rows;
+    }
+
+    public function setActive($user_chat_id, $event_name, $active){
+        $res = $this->em->createQuery('
+            UPDATE JustCommunication\TelegramBundle\Entity\TelegramUserEvent ue
+            SET ue.active=:active
+            WHERE ue.userChatId=:userChatId AND ue.name=:event_name
+            ')
+            ->setParameter('userChatId', $user_chat_id)
+            ->setParameter('event_name', $event_name)
+            ->setParameter('active', $active)
+            ->execute();
+        return $res;
+    }
+
 
 }
