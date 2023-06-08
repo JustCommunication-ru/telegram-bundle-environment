@@ -16,7 +16,7 @@ trait CacheTrait
             $this->cacheHelper->getCache()->delete($cache_name);
         }
         return $this->cacheHelper->getCache()->get($cache_name, function (ItemInterface $item) use ($callback) {
-            echo 'o';
+            //echo '-get-from-callback-';
             return $callback();
         });
     }

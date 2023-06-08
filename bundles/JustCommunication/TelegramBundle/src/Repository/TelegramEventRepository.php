@@ -31,9 +31,10 @@ class TelegramEventRepository extends ServiceEntityRepository
     }
 
     public function getEvents($force = false){
+
         $callback = function(){
             $rows = $this->em->createQuery('SELECT e FROM JustCommunication\TelegramBundle\Entity\TelegramEvent e')->getArrayResult();
-            return $this->ss::array_foreach($rows, array('roles', 'note'), 'name');
+            return $this->funcHelper::array_foreach($rows, array('roles', 'note'), 'name');
         };
         return $this->cached('telegram_event', $callback, $force);
     }

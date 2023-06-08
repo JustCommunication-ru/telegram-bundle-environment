@@ -59,3 +59,25 @@ php vendor/bin/simple-phpunit tests
 
 Бандл использует стандартный security и расчитывает на то что в хост проекте есть \App\Entity\User у которого есть test/json поле roles.
 Поддерживает роли ROLE_ADMINISTRATOR, ROLE_SUPERUSER, ROLE_MANAGER и все остальные. При этом конвертирует их во внутренние Superuser, Manager и User соответственно. Вопрос зачем такие ограничения? надо просто пробрасывать роли как есть наверно
+
+
+
+#Тесты
+
+Тесты находятся внутри бандла, но расчитаны на запуск из хост-проекта, поэтому все настройки окружения для тестирования необходимо проделать самому.
+Тесты написаны с таким расчетом, что будут запускаться на боевой базе, поэтому требовать наличия данных, изменяют эти данные, но возвращают назад.
+
+Запуск: 
+
+```php bin/phpunit bundles/JustCommunication/TelegramBundle/tests```
+
+или 
+
+```php bin/phpunit vendor/justcommunication/telegram-bundle/tests```
+в зависимости от подключения бандла.
+
+Запуск одного теста:
+
+```php bin/phpunit bundles/JustCommunication/TelegramBundle/tests/RepositoryTest.php --filter testTelegramEventsExist```
+
+Замечание: При смене конфигов не забыть выполнить `php bin/console cache:clear --env test`

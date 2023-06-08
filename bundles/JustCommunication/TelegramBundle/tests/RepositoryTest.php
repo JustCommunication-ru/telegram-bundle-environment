@@ -2,33 +2,61 @@
 
 namespace JustCommunication\TelegramBundle\Tests\Unit;
 
-//ini_set('error_reporting', E_ALL);
-//ini_set("display_errors", 1); // для development =1 (ниже)
+use JustCommunication\TelegramBundle\Entity\TelegramUserEvent;
+use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
+use JustCommunication\TelegramBundle\Repository\TelegramUserEventRepository;
+use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
+use JustCommunication\TelegramBundle\Service\FuncHelper;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 
-use JustCommunication\TelegramBundle\Tests\App\TestingKernel;
-use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpKernel\HttpKernelBrowser;
-
-
-class RepositoryTest extends TestCase
+class RepositoryTest extends KernelTestCase
 {
 
+    public TelegramEventRepository $telegramEventRepository;
+    public TelegramUserRepository $telegramUserRepository;
+    public TelegramUserEventRepository $telegramUserEventRepository;
+
     function setUp():void{
-
+        self::bootKernel();
+        $container = static::getContainer();
+        $this->telegramEventRepository = $container->get(TelegramEventRepository::class);
+        $this->telegramUserRepository = $container->get(TelegramUserRepository::class);
+        $this->telegramUserEventRepository = $container->get(TelegramUserEventRepository::class);
     }
 
-
-    public static function createClient()
-    {
-        $kernel = new TestingKernel();
-        return new HttpKernelBrowser($kernel);
+    public function testTelegramEventsExist(){
+        $events = $this->telegramEventRepository->getEvents(true);
+        //var_dump($events);
+        //$this->assertTrue(true);
+        $name = FuncHelper::baseClassName($this->telegramEventRepository->getClassName());
+        $this->assertGreaterThan(1, count($events), "Warning! No rows of ".$name);
     }
-    public function testSomeTest(){
-        $client = static::createClient();
-        $response = $client->request("GET", "/telega");
-        //dd($response);
-        $this->assertTrue(true);
+    public function testTelegramUsersExist(){
+        $users = $this->telegramUserRepository->getUsers(true);
+        //$this->assertTrue(true);
+        $name = FuncHelper::baseClassName($this->telegramEventRepository->getClassName());
+        $this->assertGreaterThan(1, count($users), "Warning! No rows of ".$name);
+    }
+
+    public function testTelegramUserEventErrorForAdminExist(){
+        $user_chat_id = $_ENV['JC_TELEGRAM_ADMIN_CHAT_ID'];
+        $event_name = 'Error';
+        $userevent = $this->telegramUserEventRepository->getUserEvent($user_chat_id, $event_name);
+        $this->assertEquals(TelegramUserEvent::class, $userevent?get_class($userevent):'null', 'Warning! Not found TelegramUserEvent for user='.$user_chat_id.' and event='.$event_name);
+    }
+
+    public function testTelegramUserEventsForAdminMoreThanOne(){
+        $user_chat_id = $_ENV['JC_TELEGRAM_ADMIN_CHAT_ID'];
+        $userevents = $this->telegramUserEventRepository->getUserEvents($user_chat_id);
+        $this->assertGreaterThan(1, count($userevents));
+    }
+
+    public function testTelegramUserEventsErrorAdminTurnOn(){
+        $user_chat_id = $_ENV['JC_TELEGRAM_ADMIN_CHAT_ID'];
+        $event_name = 'Error';
+        $active = 1;
+        $res = $this->telegramUserEventRepository->setActive($user_chat_id, $event_name, $active);
+        $this->assertTrue(true);// не понятно что проверять
     }
 }

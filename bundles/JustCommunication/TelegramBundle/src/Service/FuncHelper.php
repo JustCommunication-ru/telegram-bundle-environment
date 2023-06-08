@@ -8,6 +8,14 @@ use Exception;
 
 class FuncHelper
 {
+
+    // Превращает App\Controller\IndexCointroller в IndexCointroller
+    static function baseClassName($string){
+        $arr = explode('\\', $string);
+        $res = array_pop($arr);
+        return $res;
+    }
+
     /**
      * Проекция среза массива полей $val на поле $key
      * Создает новый массив (если передано значение $key то ассоциативный по этому полю)

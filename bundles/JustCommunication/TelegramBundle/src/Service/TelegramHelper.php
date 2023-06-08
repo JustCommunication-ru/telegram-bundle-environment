@@ -746,15 +746,18 @@ dd([$origin_str, array_map(function($item) {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Прокси методы, возможно понадобятся
+    //+
     public function getEvents($force=false){
         return $this->telegramEventRepository->getEvents($force);
     }
+    //+
     public function getUsers($force=false){
         return $this->telegramUserRepository->getUsers($force);
     }
 
     /**
      * Выборка подписки, она либо есть, либо ее нет
+     * +
      * @param $user_chat_id
      * @param $name
      * @return false|array
