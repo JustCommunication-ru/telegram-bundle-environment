@@ -9,6 +9,7 @@ use Doctrine\Persistence\ManagerRegistry;
 use JustCommunication\TelegramBundle\Service\FuncHelper;
 use JustCommunication\TelegramBundle\Trait\CacheTrait;
 use Psr\Log\LoggerInterface;
+use function PHPUnit\Framework\isNull;
 
 /**
  * @method TelegramUser|null find($id, $lockMode = null, $lockVersion = null)
@@ -20,6 +21,7 @@ class TelegramUserRepository extends ServiceEntityRepository
 {
     use CacheTrait;
     private EntityManagerInterface $em;
+    const CACHE_NAME = 'telegram_users';
 
     public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em, FuncHelper $funcHelper)
     {
@@ -61,7 +63,93 @@ class TelegramUserRepository extends ServiceEntityRepository
             }
             return $arr;
         };
-        return $this->cached('telegram_event', $callback, $force);
+        return $this->cached(self::CACHE_NAME, $callback, $force);
     }
 
+
+    public function checkUser($message){
+        $users = $this->getUsers();
+        if (!array_key_exists($message['from']['id'], $users)) {
+            $this->addUser($message['from']);
+        }elseif (
+            (isset($message['from']['first_name']) && $message['from']['first_name']!='' && ($users[$message['from']['id']]['first_name']==''||$users[$message['from']['id']]['first_name']=='-') )
+            ||
+            (isset($message['from']['username']) && $message['from']['username']!='' && ($users[$message['from']['id']]['username']==''|| $users[$message['from']['id']]['username']=='-'))){
+            // Небольшой хак на случай, если у нас не было инфы о пользователе (например его ручками добавили)
+            $this->updateUser($message['from']);
+        }
+    }
+
+
+    /**
+     * Добавление нового пользователя
+     * @param $arr
+     */
+    public function addUser($arr){ //message.from
+        if (isset($arr['id'])&& $arr['id']>0){
+            $arr['id'] = (int)$arr['id'];
+            // Так как мы не гарантируем что запрос на вставку не повторный сначала спросим базку
+            $user = $this->findOneBy(['userChatId'=>$arr['id']]);
+
+            if (is_null($user)){
+                $user = new TelegramUser();
+                $user->setUserChatId($arr['id'])
+                    ->setDatein(new \DateTime())
+                    ->setIsBot(isset($arr['is_bot'])&&$arr['is_bot']?true:false)
+                    ->setFirstName($arr['first_name'] ?? '-')
+                    ->setUsername($arr['username'] ?? '-')
+                    ->setLanguageCode($arr['language_code'] ?? '')
+                    ->setPhone($arr['phone'] ?? '');
+                $this->em->persist($user);
+                $this->em->flush();
+            }
+            // сбросим в любом сучае. раз нас сюда послали, значит в кэше нет записи.
+            $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+        }
+    }
+
+    /**
+     * Обновление информации о пользователе
+     * @param $arr
+     * @return void
+     * @throws \Psr\Cache\InvalidArgumentException
+     */
+    public function updateUser($arr){//message.from
+        if (isset($arr['id'])&& $arr['id']>0){
+            $arr['id'] = (int)$arr['id'];
+
+            $user = $this->findOneBy(['userChatId'=>$arr['id']]);
+
+            if (!is_null($user)){
+                $user->setFirstName($arr['first_name'] ?? '-')
+                    ->setUsername($arr['username'] ?? '-');
+                $this->em->persist($user);
+                $this->em->flush();
+
+            }else{
+                // то что? ошибка?
+            }
+
+            // обновился один юзер, а сбрасывать весь список
+            $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+        }
+    }
+
+    /**
+     * Сделать пользователя суперюзером
+     * @param $id
+     */
+    public function setSuperuser($id){
+
+        $user = $this->findOneBy(['userChatId'=>$id]);
+
+        if (!is_null($user)){
+            $user->setSuperuser(true);
+            $this->em->persist($user);
+            $this->em->flush();
+        }else{
+            // то что? ошибка?
+        }
+        $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+    }
 }

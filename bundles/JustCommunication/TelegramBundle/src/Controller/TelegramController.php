@@ -109,7 +109,10 @@ class TelegramController extends AbstractController
                 $webhook->setTelegramHelper($telegram);
 
                 if ($user_chat_id > 0){ // формальность, чат id всегда определен
-                    $telegram->saveMessage($arr); // сохраняем входящее сообщение а так же инормацию о пользователе
+
+                    $telegram->saveMessage($message, $arr['update_id']); // сохраняем входящее сообщение а так же инормацию о пользователе
+                    $telegram->checkUser($message); // сохраняем входящее сообщение а так же инормацию о пользователе
+
                     $list = $telegram->getList(); //подписки
 
                     $users = $telegram->getUsers(); // в этот момент мы уже схоронили себе этого пользователя, так что он на 146% у нас есть

@@ -32,7 +32,7 @@ class TelegramSaveRepository extends ServiceEntityRepository
         return $teleSave;
     }
 
-    public function new(string $ident, int $chat_id, int $message_id, $mess): TelegramSave{
+    public function newSave(string $ident, int $chat_id, int $message_id, $mess): TelegramSave{
         $teleSave = new TelegramSave();
         $teleSave->setDatein(new \DateTime)
             ->setIdent($ident)

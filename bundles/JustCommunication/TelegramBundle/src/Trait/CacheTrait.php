@@ -21,4 +21,8 @@ trait CacheTrait
         });
     }
 
+    public function cache_delete($cache_name){
+        $this->cacheHelper;
+    }
+
 }

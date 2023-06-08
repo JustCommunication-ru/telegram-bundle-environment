@@ -4,6 +4,7 @@ namespace JustCommunication\TelegramBundle\Service;
 
 use JustCommunication\TelegramBundle\Entity\TelegramSave;
 use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
+use JustCommunication\TelegramBundle\Repository\TelegramMessageRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramSaveRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
@@ -35,6 +36,7 @@ class TelegramHelper
     public TelegramSaveRepository $telegramSaveRepository;
     public TelegramUserRepository $telegramUserRepository;
     public TelegramUserEventRepository $telegramUserEventRepository;
+    public TelegramMessageRepository $telegramMessageRepository;
     public $em;
 
     //public $add_reply_emoji="\xE2\x9C\x85 "; //WHITE SMALL SQUARE
@@ -166,7 +168,7 @@ class TelegramHelper
             // Если была инструкция сохранить сообщение по идентом
             if (isset($params['save_id'])){
                 // Если надо сохраняем каждое отправленное сообщение отдельно, пусть орм подавится.
-                $this->telegramSaveRepository->new($params['save_id'], $ans['result']['chat']['id'], $ans['result']['message_id'], $mess);
+                $this->telegramSaveRepository->newSave($params['save_id'], $ans['result']['chat']['id'], $ans['result']['message_id'], $mess);
 
 
                 $this->logger->debug('TelegramSave by ident: '.$params['save_id'].' for: '.$chat_id);
@@ -569,7 +571,7 @@ dd([$origin_str, array_map(function($item) {
                         // Если была инструкция сохранить сообщение под идентом
                         if (isset($params['save_id'])){
                             // Если надо сохраняем каждое отправленное сообщение отдельно, пусть орм подавится.
-                            $this->telegramSaveRepository->new($params['save_id'], $ans['result']['chat']['id'], $ans['result']['message_id'], $mess);
+                            $this->telegramSaveRepository->newSave($params['save_id'], $ans['result']['chat']['id'], $ans['result']['message_id'], $mess);
 
                             $this->logger->debug('TelegramSave by ident: '.$params['save_id'].' for: '.$row['user_chat_id']);
                         }
@@ -583,55 +585,9 @@ dd([$origin_str, array_map(function($item) {
 
 
 
-    /**
-     * Добавляем пользователя
-     * @param $arr
-     */
-    public function addUser($arr){
-        if (isset($arr['id'])&& $arr['id']>0){
-            $arr['id'] = (int)$arr['id'];
-            // Так как мы не гарантируем что запрос на вставку не повторный сначала спросим базку
 
-            $statement = $this->db->prepare('SELECT id  FROM telegram_users WHERE user_chat_id='.$arr['id']);
-            $result = $statement->executeQuery();
-            $user = $result->fetchAssociative();
-            if ($user){
-                // А юзер то есть, епта
-            }else{
-                $values=array(
-                    'user_chat_id' => $arr['id'],
-                    'is_bot' => isset($arr['is_bot'])&&$arr['is_bot']?1:0,
-                    'first_name' => isset($arr['first_name'])?$arr['first_name']:'-',
-                    'username' => isset($arr['username'])?$arr['username']:'-',
-                    'language_code' => isset($arr['language_code'])?$arr['language_code']:'',
-                    'phone' => isset($arr['phone'])?$arr['phone']:''
-                );
 
-                $newSql  = 'INSERT INTO telegram_users SET datein=now(), user_chat_id=?, is_bot=?, first_name=?, username=?, language_code=?, phone=?, superuser=0';
-                $this->db->executeStatement($newSql,array_values($values));
-            }
-            // сбросим в любом сучае. раз нас сюда послали, значит в кэше нет записи.
-            $this->cache->delete("telegram_users");
-        }
 
-    }
-
-    public function updateUser($arr){
-        if (isset($arr['id'])&& $arr['id']>0){
-            $arr['id'] = (int)$arr['id'];
-
-            $values=array(
-                'first_name' => isset($arr['first_name'])?$arr['first_name']:'-',
-                'username' => isset($arr['username'])?$arr['username']:'-',
-            );
-
-            $newSql  = 'UPDATE telegram_users SET first_name=?, username=? WHERE user_chat_id='.$arr['id'];
-            $this->db->executeStatement($newSql,array_values($values));
-
-            // сбросим в любом сучае. раз нас сюда послали, значит в кэше нет записи.
-            $this->cache->delete("telegram_users");
-        }
-    }
 
     public function findByPhone($phone){
         $phone = str_replace("+", "", $phone);
@@ -670,49 +626,7 @@ dd([$origin_str, array_map(function($item) {
     }
 
 
-    /**
-     * Сделать пользователя суперюзером
-     * @param $id
-     */
-    public function setSuperuser($id){
-        $this->db->executeStatement(
-            'UPDATE telegram_users SET superuser=1 WHERE user_chat_id=?',
-            array_values(array('user_chat_id'=>$id)));
-        $this->cache->delete("telegram_users");
-    }
 
-    /**
-     * Сохраняем сообщение (вроде как только для входящих расчитано)
-     * @param $arr
-     */
-    public function saveMessage($arr){
-
-        $message = isset($arr['message'])?$arr['message']:(isset($arr['callback_query']['message'])?$arr['callback_query']['message']:false);
-        if ($message) {
-            $values = array(
-                'update_id' => $arr['update_id'],
-                'message_id' => $message['message_id'],
-                'user_chat_id' => $message['from']['id'],
-                'date' => date('Y-m-d H:i:s', $message['date']),
-                'mess' => ($message['text'] ?? '') . (isset($message['contact']) ? json_encode($message['contact']) : ''),
-                'entities' => isset($message['entities']) ? json_encode($message['entities']) : '',
-            );
-
-            $newSql = 'INSERT INTO telegram_messages SET update_id=?, message_id=?, user_chat_id=?, date=?, datein=now(), mess=?, entities=?';
-            $this->db->executeStatement($newSql, array_values($values));
-
-            $users = $this->getUsers(); // тут был флаг форс, так нельзя делать
-            if (!array_key_exists($message['from']['id'], $users)) {
-                $this->addUser($message['from']);
-            }elseif (
-                (isset($message['from']['first_name']) && $message['from']['first_name']!='' && ($users[$message['from']['id']]['first_name']==''||$users[$message['from']['id']]['first_name']=='-') )
-                ||
-                (isset($message['from']['username']) && $message['from']['username']!='' && ($users[$message['from']['id']]['username']==''|| $users[$message['from']['id']]['username']=='-'))){
-                // Небольшой хак на случай, если у нас не было инфы о пользователе (например его ручами добавили)
-                $this->updateUser($message['from']);
-            }
-        }
-    }
 
     //https://apps.timwhitlock.info/emoji/tables/unicode
     /**
@@ -784,6 +698,37 @@ dd([$origin_str, array_map(function($item) {
         return $this->telegramUserEventRepository->setActive($user_chat_id, $event_name, $active);
     }
 
+    /**
+     *
+     * @param $arr
+     * @return void
+     */
+    public function saveMessage($message, $update_id){
+        $this->telegramMessageRepository->newMessage($message, $update_id);
+
+    }
+
+    public function checkUser($message){
+        $this->telegramUserRepository->checkUser($message);
+
+
+    }
+
+    public function addUser($arr){
+        $this->telegramUserRepository->addUser($arr);
+    }
+
+    public function updateUser($arr){
+        $this->telegramUserRepository->updateUser($arr);
+    }
+
+    /**
+     * Сделать пользователя суперюзером
+     * @param $id
+     */
+    public function setSuperuser($id){
+        $this->telegramUserRepository->setSuperuser($id);
+    }
 
 
 

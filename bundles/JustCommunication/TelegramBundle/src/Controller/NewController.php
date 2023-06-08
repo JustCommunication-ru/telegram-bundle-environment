@@ -3,6 +3,7 @@
 namespace JustCommunication\TelegramBundle\Controller;
 
 use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
+use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
 use JustCommunication\TelegramBundle\Service\TelegramHelper;
 use JustCommunication\TelegramBundle\Trait\CacheTrait;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -25,7 +26,7 @@ class NewController extends AbstractController{
 
 
     #[Route('/telega')]
-    public function index(ParameterBagInterface $bag, TelegramHelper $telegramHelper, TelegramEventRepository $eventRepository){
+    public function index(ParameterBagInterface $bag, TelegramHelper $telegramHelper, TelegramEventRepository $eventRepository, TelegramUserRepository $telegramUserRepository){
 
         //$x = $this->cached('telegram_event', function(){return 'AAA';}, true);
 
@@ -46,7 +47,7 @@ class NewController extends AbstractController{
 
         //$x = $telegramHelper->setActive(537830154, "Error", 2);
 
-        $x = $telegramHelper->getUserEvent(537830154, "Error");
+        //$x = $telegramHelper->getUserEvent(537830154, "Error");
 
 
 
@@ -57,9 +58,20 @@ class NewController extends AbstractController{
         //$x = $eventRepository->getEvents(true);
 
         //$x = $this->number();
+        //var_dump($x);
+
+
+        $t =  \DateTime::createFromFormat("U",1649120903);
+        $t2 = new \DateTime();
+        $t2->setTimestamp(1649120903);
+        $t3 = new \DateTime(date("Y-m-d H:i:s", 1649120903));
+        echo $t->format("Y-m-d H:i:s").'   '.$t2->format("Y-m-d H:i:s").'   '.$t3->format("Y-m-d H:i:s");
+
+
+
+        $x = $telegramUserRepository->findOneBy(['userChatId'=>132]);
+
         var_dump($x);
-
-
         //return new Response('<h1>hello Telega</h1>');
         return $this->render('@Telegram/new/index.html.twig', ['raw'=>'<h1>hello Telega'.$this->my_param.'</h1>', 'APP_NAME'=>'sdfasdfs']);
     }
