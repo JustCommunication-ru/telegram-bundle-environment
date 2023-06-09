@@ -30,6 +30,10 @@ class TelegramExtension extends Extension
             'justcommunication.telegram.config',
             $config['config']
         );
+        $container->setParameter(
+            'justcommunication.telegram.events',
+            $config['events']
+        );
 
 
         /*

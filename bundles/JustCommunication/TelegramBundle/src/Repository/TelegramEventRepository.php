@@ -20,6 +20,7 @@ class TelegramEventRepository extends ServiceEntityRepository
 {
     use CacheTrait;
     private EntityManagerInterface $em;
+    const CACHE_NAME = 'telegram_events';
 
     public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em, FuncHelper $funcHelper)
     {
@@ -36,7 +37,29 @@ class TelegramEventRepository extends ServiceEntityRepository
             $rows = $this->em->createQuery('SELECT e FROM JustCommunication\TelegramBundle\Entity\TelegramEvent e')->getArrayResult();
             return $this->funcHelper::array_foreach($rows, array('roles', 'note'), 'name');
         };
-        return $this->cached('telegram_event', $callback, $force);
+        return $this->cached(self::CACHE_NAME, $callback, $force);
+    }
+
+    public function updateEventByName($name, $note, $roles): TelegramEvent{
+        $event = $this->findOneBy(['name'=>$name]);
+        if (!is_null($event)){
+            $event->setNote($note)->setRoles($roles);
+            $this->em->persist($event);
+            $this->em->flush();
+        }else{
+            //error
+        }
+        $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+        return $event;
+    }
+
+    public function newEvent($name, $note, $roles): TelegramEvent{
+        $event = new TelegramEvent();
+        $event->setName($name, $note, $roles)->setNote($note)->setRoles($roles);
+        $this->em->persist($event);
+        $this->em->flush();
+        $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+        return $event;
     }
 
 }

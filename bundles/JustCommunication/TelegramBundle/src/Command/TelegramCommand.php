@@ -2,70 +2,73 @@
 
 namespace JustCommunication\TelegramBundle\Command;
 
-
+use Doctrine\DBAL\Connection;
+use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
-
 use JustCommunication\TelegramBundle\Service\CacheHelper;
 use JustCommunication\TelegramBundle\Service\FuncHelper;
 use JustCommunication\TelegramBundle\Service\TelegramHelper;
-
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
-use JustCommunication\TelegramBundle\Kernel;
-use Doctrine\DBAL\Connection;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-/**
- * Функционал работы с телеграм ботом на серверной стороне.
- * Здесь же методы для крон задач.
- */
-class CommandTelegram extends Command
+
+class TelegramCommand extends Command
 {
+    private $telegram;
+    private $kernel;
+    private $telegramUserRepository;
+    private $telegramEventRepository;
+    private $curl;
 
-    protected static $defaultName = 'jc:telegram:work';
 
-    public $config;
-    public $telegram;
-    public $db;
-    public $cache;
-    public TelegramUserRepository $telegramUserRepository;
-
-    public function __construct(ParameterBagInterface $params, TelegramHelper $telegramHelper, Connection $connection, CacheHelper $cacheHelper, KernelInterface $kernel, HttpClientInterface $client, TelegramUserRepository $telegramUserRepository)
+    public function __construct(
+                                TelegramHelper $telegramHelper,
+                                Connection $connection,
+                                CacheHelper $cacheHelper,
+                                KernelInterface $kernel,
+                                HttpClientInterface $client,
+                                TelegramUserRepository $telegramUserRepository,
+                                TelegramEventRepository $telegramEventRepository)
     {
-        // а надо ли?
-        $this->config = $params->get('telegram');
+        parent::__construct();
+
         $this->telegram = $telegramHelper;
         $this->db = $connection;
         $this->cache = $cacheHelper->getCache();
         $this->kernel = $kernel;
         $this->telegramUserRepository = $telegramUserRepository;
+        $this->telegramEventRepository = $telegramEventRepository;
 
 
         $this->curl = $client;
-        parent::__construct();
+
     }
 
-    /*
     protected function configure()
     {
+
         $this
-            ->setName('jc:telegram:work')
+            ->setName('jc:telegram')
             ->setDescription('Description')
             ->setHelp('Help')
 
             // Опции это то что с двумя дефисами --update, значения через пробел, если не указать будет ругаться!
+            ->addOption('init', null, InputOption::VALUE_NONE, 'Action. Init db data, check and link admin contact')
+
+
             ->addOption('d', null, InputOption::VALUE_NONE, 'Debug mode, show verbose log')
             ->addOption('setWebhook', null, InputOption::VALUE_NONE, 'Action. Say to Telegram use configured webhook url (services.yaml)')
             ->addOption('delWebhook', null, InputOption::VALUE_NONE, 'Action. ')
             ->addOption('sendContact', null, InputOption::VALUE_NONE, 'Action. ')
-            ->addOption('init', null, InputOption::VALUE_NONE, 'Action. Init db data, check and link admin contact')
+
 
             ->addOption('getWebhookInfo', null, InputOption::VALUE_NONE, 'Action. Get from Telegram webkook parameters.')
             ->addOption('getUpdates', null, InputOption::VALUE_NONE, 'Action. get updates from Telegram.')
@@ -97,39 +100,12 @@ class CommandTelegram extends Command
 
     }
 
-    */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-
+        $output->writeln('LALALA');
         $this->io = new SymfonyStyle($input, $output);
         $this->dev_debug_input = $input;
 
-        /*
-        // если включена отладка
-        if ($input->getOption('d')) {
-            // Передаем в solr_product колбэк для отображения отладочной инфы
-            $this->solr_products->debug_callback = function($str){
-                $this->io->warning($str);
-            };
-        }
-        */
-/*
-        if($input->hasOption('event')) {
-            $this->io->info('hasOption');
-        }
-        if($input->hasParameterOption('event')) {
-            $this->io->info('hasParameterOption');
-        }
-        if($input->hasParameterOption('event')) {
-            $this->io->info('hasParameterOption');
-        }
-
-        var_dump($input->getOption('event'));
-        var_dump($input->getOptions());
-
-
-        $this->io->error('end');
-*/
 
         if ($input->getOption('init')) {
             $this->io->info('Action: init');
@@ -197,27 +173,6 @@ class CommandTelegram extends Command
             }else{
                 $this->io->error(['You need to set message (--mess) options']);
             }
-        }elseif ($input->getOption('initlist')) {
-            $this->io->info('Action: initlist');
-/*
-            $list = $this->telegram->getList(true);
-
-            if (count($list)==0){
-                $this->db->executeStatement('INSERT INTO telegram_list SET name=?, note=?',
-                    array_values(array('name' => 'Error', 'note' => 'Подписка на ошибки сервера')));
-                $this->db->executeStatement('INSERT INTO telegram_list SET name=?, note=?',
-                    array_values(array('name' => 'Report', 'note' => 'Подписка на какие-то отчеты, я еще не придумал какие')));
-                $this->db->executeStatement('INSERT INTO telegram_list SET name=?, note=?',
-                    array_values(array('name' => 'Test', 'note' => 'Тестовая подписька')));
-                $this->cache->delete('telegram_list');
-
-                $this->io->success('Inserted successfully');
-            }else{
-                $this->io->success('Already filled');
-            }
-            */
-            $this->io->caution('DEPRECATED переделать, list, roles
-            ');
         }elseif ($input->getOption('clearlist')) {
             $this->io->info('Action: clearlist');
             $this->db->executeStatement('DELETE FROM telegram_list WHERE id>0');
@@ -326,29 +281,14 @@ class CommandTelegram extends Command
                 $_GET['command_request'] = '1';
                 $_GET['token'] = $this->telegram->config['token'];
 
-                //$request = Request::create('/telegram/webhook?token='.$this->telegram->config['token'], 'POST', $paramaters);
-                $request = Request::create('/telegram/webhook', 'POST', array(), array(), array(), array(), json_encode($paramaters));
-                //$request = Request::create('/telegram/webhook', 'GET', array('sdfs'=>'dgsdfg'), array(), array(), array(), json_encode($paramaters));
+                $request = Request::create($this->telegram->config['webhook_url_path'], 'POST', array(), array(), array(), array(), json_encode($paramaters));
                 $response = $this->kernel->handle($request, HttpKernelInterface::SUB_REQUEST);
 
                 die($response->getContent());
-
-
-                /*
-                // Проверка боевого
-                $response = $this->curl->request(
-                    'POST',
-                    'https://service.espvbprr.jc9.ru/telegram/webhook?token=1563625748:AAGn-bBMpbYy2iEeXOYnbhDx8HOrr7VJvJw',
-                    ['body' => json_encode($paramaters)]
-                );
-                die($response->getContent());
-                */
-
             }
 
-
         }else{
-            //$this->io->warning($this->config);
+            //$this->io->warning($this->telegram->config);
             $this->io->warning([
                 'Choose needed options for action (-h in case of help)',
             ]);
@@ -356,15 +296,17 @@ class CommandTelegram extends Command
         return Command::SUCCESS;
     }
 
+
+
     /**
-     * Пощаговая проверка/настройка конфигов телеграма в виде генератора
+     * Пошаговая проверка/настройка конфигов телеграма в виде генератора
      * @return \Generator
      */
     private function telegramInit(){
 
+
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// 1) проверка админа
-        //$x = $this->io->ask('Admin telegram contact (admin_chat_id):' . $admin_chat_id, '5555');
         $all_is_good_go_on_dude = 1;
         $admin_chat_id = (int)$this->telegram->config["admin_chat_id"];
 
@@ -377,7 +319,7 @@ class CommandTelegram extends Command
             $all_is_good_go_on_dude=false;
         }
         yield $all_is_good_go_on_dude;
-
+/*
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// 2) проверка связи с телеграммом
         $all_is_good_go_on_dude=2;
@@ -387,24 +329,24 @@ class CommandTelegram extends Command
             if ($res['ok']){
                 $this->io->success(['Real telegram server connection success ('.$this->telegram->config["url"].')']);
 
-                if ($_ENV['APP_ENV']=='dev'){
-                    if (!isset($_ENV['MODULES_TELEGRAM_WEBHOOK_SERVER_FOR_DEV']) || $_ENV['MODULES_TELEGRAM_WEBHOOK_SERVER_FOR_DEV']==''){
-                        $this->io->caution(['Warning, not set param MODULES_TELEGRAM_WEBHOOK_SERVER_FOR_DEV in in .env / .env.local',
-                            'for example MODULES_TELEGRAM_WEBHOOK_SERVER_FOR_DEV="https://service.espvbprr.jc9.ru"',
-                            'Note, it`s only LOCAL APP_ENV=DEV configuration requirements']);
-                        yield false;
-                    }
-                }
-
                 if (isset($res['result']['url']) && $res['result']['url'] == $this->telegram->getWebhookUrl()) {
-                    $this->io->success(['Webhook for '.$_ENV['MODULES_TELEGRAM_BOT_NAME'].' already set correctly:', $res['result']['url']]);
+                    $this->io->success(['Webhook for '.$this->telegram->config['bot_name'].' already set correctly:', $res['result']['url']]);
                 } else {
-                    $res_set_wh = $this->telegram->setWebhook();
-                    if ($res_set_wh && $res_set_wh["ok"]){
-                        $this->io->success(['Webhook for '.$_ENV['MODULES_TELEGRAM_BOT_NAME'].' now set successfully:', $this->telegram->getWebhookUrl()]);
+                    $this->io->warning(['Webhook for '.$this->telegram->config['bot_name'].' not set correctly: ', $res['result']['url']]);
+
+                    if ($_ENV['APP_ENV']!='dev' || $this->telegram->config['production_webhook_app_url']!='') {
+                        $res_set_wh = $this->telegram->setWebhook();
+                        if ($res_set_wh && $res_set_wh["ok"]) {
+                            $this->io->success(['Webhook for ' . $this->telegram->config['bot_name'] . ' now set successfully:', $this->telegram->getWebhookUrl()]);
+                        } else {
+                            $this->io->caution(['Warning: setWebhook ('.$this->telegram->getWebhookUrl().') has bad response', var_export($res_set_wh, true)]);
+                            $all_is_good_go_on_dude = false;
+                        }
                     }else{
-                        $this->io->caution(['Warning: setWebhook has bad response', var_export($res_set_wh, true)]);
-                        $all_is_good_go_on_dude=false;
+                        $this->io->warning(['Warning, param "telegram.config.production_webhook_app_url" is empty in packages/telegram.yaml',
+                            'it must be a real URL of your project in www',
+                            'Configuration your telegram bot webhook skipped',
+                            'Note, it`s only for LOCAL APP_ENV=DEV configuration requirements']);
                     }
                 }
             }else{
@@ -418,12 +360,11 @@ class CommandTelegram extends Command
             $all_is_good_go_on_dude=false;
         }
         yield $all_is_good_go_on_dude;
-
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// 3) Проверка отправки сообщения админу
         $all_is_good_go_on_dude=3;
 
-        $mess = "*Command.app.telegram.init* Проверка отправки сообщения из ".$_ENV['APP_NAME']. ' для администратора';
+        $mess = '*php bin/console '.$this->getName().' --init* Проверка отправки сообщения из '.$_ENV['APP_NAME']. ' для администратора.';
         $res_send = $this->telegram->sendMessage($admin_chat_id, $mess);
         if ($res_send) {
             if ($res_send['ok']) {
@@ -443,39 +384,29 @@ class CommandTelegram extends Command
         /// 4) Проверка и перезапись справочных таблиц telegram_list telegram_users_list
         $all_is_good_go_on_dude=4;
 
-        $preset = array(
-            'Error'=>array('note'=>'Подписка на ошибки сервера', 'roles'=>array("Superuser")),
-            'Neworder'=>array('note'=>'Подписка на создание и изменение заказа', 'roles'=>array("Superuser","Moderator")),
-            'Payorder'=>array('note'=>'Подписка на оплату заказа для бухгалтера', 'roles'=>array("Superuser","Moderator")),
-            'Report'=>array('note'=>'Подписка на отчеты', 'roles'=>array("Superuser")),
-            'Category'=>array('note'=>'Подписка на изменения категорий при парсинге прайсов', 'roles'=>array("Moderator")),
-            'Kkm'=>array('note'=>'Подписка на ошибки KKM', 'roles'=>array("Superuser")),
-            'Smsover'=>array('note'=>'Подписка на ошибки лимита смс', 'roles'=>array("Superuser")),
-        );
+        $preset = $this->telegram->events;
 
-        $list = $this->telegram->getList(true);
-        $_changes = ['Table "telegram_list" update successfuly:'];
-        foreach ($preset as $name=>$item){
+        $list = $this->telegram->getEvents(true);
+        $_changes = ['Table for "'.$this->telegramEventRepository->getClassName().'" update successfuly:'];
+        foreach ($preset as $item){
+            $name = $item['name'];
             if (isset($list[$name])){
                 if ($list[$name]['note']==$item['note'] && json_encode($list[$name]['roles'])==json_encode($item['roles'])) {
                     $_changes[$name] = '"'.$name.'" is up to date';
                 }else{
-                    $this->db->executeStatement('UPDATE telegram_list SET `note`=?, `roles`=? WHERE `name`=?',
-                        array_values(array('note' => $preset[$name]['note'], 'roles' => json_encode($preset[$name]['roles']), 'name' => $name)));
+                    $this->telegramEventRepository->updateEventByName($item['name'], $item['note'], $item['roles']);
                     $_changes[$name] = '"'.$name.'" was updated';
                 }
             }else{
-                $this->db->executeStatement('INSERT INTO telegram_list SET `note`=?, `roles`=?, `name`=?',
-                    array_values(array('note' => $preset[$name]['note'], 'roles'=>json_encode($preset[$name]['roles']), 'name' => $name)));
+                $this->telegramEventRepository->newEvent($item['name'], $item['note'], $item['roles']);
                 $_changes[$name] = '"'.$name.'" was inserted';
             }
         }
-        $this->cache->delete('telegram_list');
-        $this->io->success($_changes);
 
+        $this->io->success($_changes);
         yield $all_is_good_go_on_dude;
 
-
+*/
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// 5) Прописка пользователя телеграма
         $all_is_good_go_on_dude=5;
@@ -483,7 +414,7 @@ class CommandTelegram extends Command
         $users = $this->telegram->getUsers(true); // в этот момент мы уже схоронили себе этого пользователя, так что он на 146% у нас есть
 
         if (isset($users[$admin_chat_id]) && $users[$admin_chat_id]['superuser']==1){
-            $this->io->success(['Table "telegram_users" ok, telegram admin user already in database and superuser']);
+            $this->io->success(['Telegram admin user already in database and superuser']);
         }else{
             $paramaters = array(
                 'update_id' => 1,
@@ -501,9 +432,10 @@ class CommandTelegram extends Command
             );
             $_GET['command_request'] = '1';
             $_GET['token'] = $this->telegram->config['token'];
-            $request = Request::create('/telegram/webhook', 'POST', array(), array(), array(), array(), json_encode($paramaters));
+            $request = Request::create('/telegram'.$this->telegram->config['webhook_url_path'], 'POST', array(), array(), array(), array(), json_encode($paramaters));
             $response = $this->kernel->handle($request, HttpKernelInterface::SUB_REQUEST);
 
+            var_dump($response->getContent());
             $res = json_decode($response->getContent(), true);
             if ($res && isset($res['result']) && $res['result']=='ok'){
                 $users_new = $this->telegram->getUsers(true);
@@ -519,10 +451,13 @@ class CommandTelegram extends Command
                     $all_is_good_go_on_dude=false;
                 }
             }else{
+                var_dump($res);
                 $this->io->caution(['Warning: network error connect to telegram server on MakeMeGreatAgain.']);
                 $all_is_good_go_on_dude=false;
             }
         }
+        yield false;
+
         yield $all_is_good_go_on_dude;
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -560,7 +495,7 @@ class CommandTelegram extends Command
                 );
                 $_GET['command_request'] = '1';
                 $_GET['token'] = $this->telegram->config['token'];
-                $request = Request::create('/telegram/webhook', 'POST', array(), array(), array(), array(), json_encode($paramaters));
+                $request = Request::create($this->telegram->config['webhook_url_path'], 'POST', array(), array(), array(), array(), json_encode($paramaters));
                 $response = $this->kernel->handle($request, HttpKernelInterface::SUB_REQUEST);
 
                 $res = json_decode($response->getContent(), true);
@@ -631,12 +566,9 @@ class CommandTelegram extends Command
         /// Отправка контакта (привязка телефона к контакту) админа
         $all_is_good_go_on_dude=10;
 
-            $this->io->success(['All done. Congratulation!']);
+        $this->io->success(['All done. Congratulation!']);
         yield $all_is_good_go_on_dude;
 
-
-
     }
-
 
 }

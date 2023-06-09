@@ -7,8 +7,18 @@ telegram:
         proxy: ""
         proxy_auth: "" #login:pass
         token: "%env(JC_TELEGRAM_TOKEN)%"
-        webhook: "%env(APP_URL)%/telegram/webhook"
-        user_link: "%env(APP_URL)%/user/telegram/link/hashplace" # hashplace заменяется на реальный хэш
+        app_url: "%env(APP_URL)%"
+        production_webhook_app_url: "" # чтобы при запуске из локала не сбивать реально работающий хук это необходимо указать сдесь
+        webhook_url_path: "/telegram/webhook"
+        user_link_url_path: "/user/telegram/link/hashplace" # hashplace заменяется на реальный хэш
         wrong_event_exception: true # ронять скрипты при попытке отправить несуществующий event, можно считать эту опцию strict mode
         markdown_checker: true # форматирование сообщения (умное исправление markdown и т.д. мероприятия нацеленные на 100% доставку сообщения)
         length_checker: false # обрезание по длине
+    events:
+        - {name: "Error", note: "Подписка на ошибки сервера", roles: ["Superuser"]}
+        - {name: "Neworder", note: "Подписка на создание и изменение заказа", roles: ["Superuser", "Moderator"]}
+        - {name: "Payorder", note: "Подписка на оплату заказа для бухгалтера", roles: ["Superuser", "Moderator"]}
+        - {name: "Report", note: "Подписка на отчеты", roles: ["Superuser"]}
+        - {name: "Category", note: "Подписка на изменения категорий при парсинге прайсов", roles: ["Superuser", "Moderator"]}
+        - {name: "Kkm", note: "Подписка на ошибки KKM", roles: ["Superuser"]}
+        - {name: "Smsover", note: "Подписка на ошибки лимита смс", roles: ["Superuser"]}

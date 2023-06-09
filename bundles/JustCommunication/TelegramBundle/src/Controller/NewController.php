@@ -55,12 +55,10 @@ class NewController extends AbstractController{
 
 
 
-        //$x = $eventRepository->getEvents(true);
+        $x = $eventRepository->getEvents(true);
+        var_dump($x);
 
-        //$x = $this->number();
-        //var_dump($x);
-
-
+/*
         $t =  \DateTime::createFromFormat("U",1649120903);
         $t2 = new \DateTime();
         $t2->setTimestamp(1649120903);
@@ -70,8 +68,8 @@ class NewController extends AbstractController{
 
 
         $x = $telegramUserRepository->findOneBy(['userChatId'=>132]);
-
         var_dump($x);
+        */
         //return new Response('<h1>hello Telega</h1>');
         return $this->render('@Telegram/new/index.html.twig', ['raw'=>'<h1>hello Telega'.$this->my_param.'</h1>', 'APP_NAME'=>'sdfasdfs']);
     }

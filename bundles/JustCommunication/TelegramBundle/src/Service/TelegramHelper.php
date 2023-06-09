@@ -53,6 +53,7 @@ class TelegramHelper
     )
     {
         $this->config = $params->get("justcommunication.telegram.config");
+        $this->events = $params->get("justcommunication.telegram.events");
         if (!$this->config['token']){
             throw new \Exception('Telegram token const not set in .env.local [JC_TELEGRAM_TOKEN]', 1);
         }
@@ -91,10 +92,10 @@ class TelegramHelper
      * @return string
      */
     public function getWebhookUrl(){
-        return $_ENV['APP_ENV']=='dev'&&isset($_ENV['MODULES_TELEGRAM_WEBHOOK_SERVER_FOR_DEV'])
-            ?$_ENV['MODULES_TELEGRAM_WEBHOOK_SERVER_FOR_DEV'].'/telegram/webhook?token='.$this->config['token'].''
-            :$this->config['webhook'].'?token='.$this->config['token'];
-        //return $this->config['webhook'];
+        return ($_ENV['APP_ENV']=='dev'
+                        ?$this->config['production_webhook_app_url']
+                        :$this->config['app_url'])
+            .$this->config['webhook_url_path'].'?token='.$this->config['token'];
     }
 
 
@@ -477,22 +478,23 @@ dd([$origin_str, array_map(function($item) {
         $url .='/'.$method;
 
         //2023-02-02 text отправляем POST-ом,
-        $text = $params['text'];
 
-
-        if ($this->config['length_checker'] && $cut_mode){
-
-            $char_limit = 1000;
-            if (mb_strlen($text)>$char_limit){
-                $text = mb_substr($text, 0, $char_limit);
+        if (isset($params['text'])) {
+            $text = $params['text'];
+            if ($this->config['length_checker'] && $cut_mode) {
+                $char_limit = 1000;
+                if (mb_strlen($text) > $char_limit) {
+                    $text = mb_substr($text, 0, $char_limit);
+                }
+                $text = '`это "обрезанная" копия сообщения которое не было доставлено`' . "\r\n" . $text;
             }
-            $text = '`это "обрезанная" копия сообщения которое не было доставлено`'."\r\n".$text;
+            if ($this->config['markdown_checker']) {
+                $text = $this->markdown_checker($text, true, true);
+            }
+            unset($params['text']); // убираем из GET
+        }else{
+            $text = null;
         }
-        if ($this->config['markdown_checker']) {
-            $text = $this->markdown_checker($text, true, true);
-        }
-
-        unset($params['text']); // убираем из GET
 
         if (!empty($params)){
             $url .="?".http_build_query($params);
@@ -503,7 +505,9 @@ dd([$origin_str, array_map(function($item) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, 1);
         //curl_setopt($ch, CURLOPT_POSTFIELDS, implode('&',$post_arr));
-        curl_setopt($ch, CURLOPT_POSTFIELDS, 'text='.$text);
+        if ($text) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, 'text=' . $text);
+        }
         if ($this->config['proxy']!=''){
             curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);  // тип прокси
             curl_setopt($ch, CURLOPT_PROXY,  $this->config['proxy']);                 // ip, port прокси
@@ -538,7 +542,7 @@ dd([$origin_str, array_map(function($item) {
 
             // Если телеграм ответил что сообщение длинное, то отправляем в безопасном режиме
             // Избегаем случай рекурсии
-            if ($cut_mode==false && isset($this->last_ans['error_code']) && $this->last_ans['error_code']==400 && strpos($this->last_ans['description'], 'is too long')){
+            if ($cut_mode==false && isset($this->last_ans['error_code']) && $this->last_ans['error_code']==400 && strpos($this->last_ans['description'], 'is too long') && !is_null($text)){
                 $this->logger->warning('message too long, try to resend cutted');
                 $this->last_ans = $this->query($method, array_merge($params, array('text'=>$text)), true); // игнорируем ответ от этой функции?
             }
@@ -622,7 +626,6 @@ dd([$origin_str, array_map(function($item) {
 
     public function saveMessage($message, $update_id){
         $this->telegramMessageRepository->newMessage($message, $update_id);
-
     }
 
     public function checkUser($message){
