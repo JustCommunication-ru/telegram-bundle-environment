@@ -2,19 +2,15 @@
 
 namespace JustCommunication\TelegramBundle\Service;
 
-use JustCommunication\TelegramBundle\Entity\TelegramSave;
 use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramMessageRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramSaveRepository;
-use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Exception;
-use Doctrine\ORM\EntityManagerInterface;
 use JustCommunication\TelegramBundle\Repository\TelegramUserEventRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
-use Psr\Cache\InvalidArgumentException;
+
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Contracts\Cache\ItemInterface;
+
 
 /*
  * Если в этом блоке встречаются символы из перечисленных: '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'  — их нужно экранировать, добавлять перед ними обратный слэш \
@@ -49,10 +45,7 @@ class TelegramHelper
      */
     public $debug_callback = null;
 
-    public function __construct(ParameterBagInterface $params, Connection $connection,
-                                CacheHelper $cacheHelper, LoggerInterface $logger,
-
-
+    public function __construct(ParameterBagInterface $params,LoggerInterface $logger,
                                 TelegramEventRepository $telegramEventRepository,
                                 TelegramSaveRepository $telegramSaveRepository,
                                 TelegramUserRepository $telegramUserRepository,
@@ -63,15 +56,12 @@ class TelegramHelper
         if (!$this->config['token']){
             throw new \Exception('Telegram token const not set in .env.local [JC_TELEGRAM_TOKEN]', 1);
         }
-        $this->db = $connection;
-        $this->cache = $cacheHelper->getCache();
         $this->logger = $logger;
 
         $this->telegramEventRepository = $telegramEventRepository;
         $this->telegramSaveRepository = $telegramSaveRepository;
         $this->telegramUserRepository = $telegramUserRepository;
         $this->telegramUserEventRepository = $telegramUserEventRepository;
-
     }
 
     /**
@@ -131,77 +121,6 @@ class TelegramHelper
         return $this->query('getWebhookInfo');
     }
 
-    /**
-     * Отправляет сообщение/редактирует ранее сохраненное, сохраняет полученное при необходимости
-     * @param int $chat_id
-     * @param string $mess
-     * @param array $params
-     * @return mixed
-     */
-    //public function  sendMessage(int $chat_id, string $text, $entities= []): array{
-    public function  sendMessage(int $chat_id, string $mess, $params=[]): array{
-        $teleSave = null;
-        if (isset($params['load_id'])){
-            $teleSave = $this->telegramSaveRepository->findOneBy(['ident'=>$params['load_id'], 'userChatId'=>$chat_id]);
-        }
-        $data = ['text'=>$mess];
-
-        if ($teleSave && isset($params['add_text']) && $params['add_text']!=''){
-            // Изменяем начальное сообщение
-
-            $teleSave = $this->telegramSaveRepository->updateMess($teleSave, $teleSave->getMess()."\r\n".$this->add_reply_emoji.$params['add_text']);
-
-            $pre_ans = $this->sendMess($chat_id, [
-                'message_id'=>$teleSave->getMessageId(),
-                'text'=>$teleSave->getMess()
-            ], 'editMessageText');
-
-
-
-            // Делаем новое сообщение ответом на предыдущее
-            $data['reply_to_message_id']=$teleSave->getMessageId();
-        }
-
-        $ans = $this->sendMess($chat_id, $data);
-
-        if (isset($ans['ok']) && $ans['ok']){
-            // Если была инструкция сохранить сообщение по идентом
-            if (isset($params['save_id'])){
-                // Если надо сохраняем каждое отправленное сообщение отдельно, пусть орм подавится.
-                $this->telegramSaveRepository->newSave($params['save_id'], $ans['result']['chat']['id'], $ans['result']['message_id'], $mess);
-
-
-                $this->logger->debug('TelegramSave by ident: '.$params['save_id'].' for: '.$chat_id);
-            }
-        }else{
-            $ans['ok'] = false;
-        }
-
-        return $ans;
-    }
-
-    /**
-     * 2022-08-19 Новый метод, непосредственная отправка, на вход ждет не сообщение, а структуру
-     * его бы сделать private... наверно
-     * @param int $chat_id
-     * @param array $data
-     * @param string $method
-     * @return array
-     */
-    public function  sendMess(int $chat_id, array $data, string $method='sendMessage'): array{
-        $data['text'] = $this->emoji($data['text']??''); // ищем эмоджи и правильно их конвертим
-        return $chat_id>0
-            ?$this->query($method, array_merge(
-                array(
-                    'chat_id'=>$chat_id,
-                    'text'=>'',
-                    'parse_mode'=>'Markdown'
-                ), $data))
-            :array('curl_error'=>'no chat_id', 'ok'=>false);
-    }
-
-
-
     private array $last_ans = array();
 
     public function get_last_result(): array{
@@ -232,7 +151,7 @@ class TelegramHelper
      * @param $arg
      * @return false|int|string,
      */
-    function index_of_min($arg){
+    private function index_of_min($arg){
         $min =999999;
         $index = false;
         foreach ($arg as $i=>$v){
@@ -251,7 +170,7 @@ class TelegramHelper
      * @param bool $fix_postfix
      * @return string|string[]
      */
-    function markdown_checker($str, $fix=false, $fix_postfix=false){
+    private function markdown_checker($str, $fix=false, $fix_postfix=false){
         $origin_str = $str;
         $res =  [];
         $shift = 0;
@@ -338,6 +257,212 @@ dd([$origin_str, array_map(function($item) {
 
     }
 
+
+
+    /**
+     * @return array
+     */
+    public function getDebug(): array{
+        return $this->debug;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAdminChatId(){
+        return $this->config['admin_chat_id'];
+    }
+
+
+    //------------------------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+    /**
+     * Отправляет сообщение/редактирует ранее сохраненное, сохраняет полученное при необходимости
+     * @param int $chat_id
+     * @param string $mess
+     * @param array $params
+     * @return mixed
+     */
+    //public function  sendMessage(int $chat_id, string $text, $entities= []): array{
+    public function  sendMessage(int $chat_id, string $mess, $params=[]): array{
+        $teleSave = null;
+        if (isset($params['load_id'])){
+            $teleSave = $this->telegramSaveRepository->findOneBy(['ident'=>$params['load_id'], 'userChatId'=>$chat_id]);
+        }
+        $data = ['text'=>$mess];
+
+        if ($teleSave && isset($params['add_text']) && $params['add_text']!=''){
+            // Изменяем начальное сообщение
+
+            $teleSave = $this->telegramSaveRepository->updateMess($teleSave, $teleSave->getMess()."\r\n".$this->add_reply_emoji.$params['add_text']);
+
+            $pre_ans = $this->sendMess($chat_id, [
+                'message_id'=>$teleSave->getMessageId(),
+                'text'=>$teleSave->getMess()
+            ], 'editMessageText');
+
+
+
+            // Делаем новое сообщение ответом на предыдущее
+            $data['reply_to_message_id']=$teleSave->getMessageId();
+        }
+
+        $ans = $this->sendMess($chat_id, $data);
+
+        if (isset($ans['ok']) && $ans['ok']){
+            // Если была инструкция сохранить сообщение по идентом
+            if (isset($params['save_id'])){
+                // Если надо сохраняем каждое отправленное сообщение отдельно, пусть орм подавится.
+                $this->telegramSaveRepository->newSave($params['save_id'], $ans['result']['chat']['id'], $ans['result']['message_id'], $mess);
+
+
+                $this->logger->debug('TelegramSave by ident: '.$params['save_id'].' for: '.$chat_id);
+            }
+        }else{
+            $ans['ok'] = false;
+        }
+
+        return $ans;
+    }
+
+    /**
+     * 2022-08-19 Новый метод, непосредственная отправка, на вход ждет не сообщение, а структуру
+     * его бы сделать private... наверно
+     * @param int $chat_id
+     * @param array $data
+     * @param string $method
+     * @return array
+     */
+    public function  sendMess(int $chat_id, array $data, string $method='sendMessage'): array{
+        $data['text'] = $this->emoji($data['text']??''); // ищем эмоджи и правильно их конвертим
+        return $chat_id>0
+            ?$this->query($method, array_merge(
+                array(
+                    'chat_id'=>$chat_id,
+                    'text'=>'',
+                    'parse_mode'=>'Markdown'
+                ), $data))
+            :array('curl_error'=>'no chat_id', 'ok'=>false);
+    }
+
+
+    /**
+     * Осуществить рассылку по эвенту, сообщение с переносом строк
+     * @param string $event
+     * @param string $mess
+     * @return array
+     */
+    public function event(string $event, string $mess, $params=[]): array{
+
+//        $mess = '``` '.$event.'```'."\r\n".$mess;
+//        $mess .= "\r\n".'/remove'.$event.' - отписаться от рассылки';
+
+        $mess = str_replace(array('<br>'), array("\r\n"), $mess);
+        $event = mb_convert_case(addslashes($event), MB_CASE_TITLE); // зачем addslashes? можно же порезать всё лишнее
+
+        // Будем ронять скрипт если попытались отправить несуществующий евент, а у нас strict mode
+        if (!array_key_exists($event, $this->getEvents()) && $this->config['wrong_event_exception']) {
+            throw new \Exception('Event "'.$event.'" not found, try app:telegram --init for repair');
+        }
+
+        //wrong_event_exception
+
+        // почему выборка юзверей не через функцию а прям тут?
+        // повышаем живучесть механизма, если слетела базка, отправляем весточку админу!
+        try {
+            $subscriber_ids = $this->telegramUserEventRepository->getEventUserIds($event);
+        }catch (\Exception $e){
+            $mess = '*Ошибка рассылки сообщений!*'."\r\n".'Запрос подписчиков на событие '.$event.' провалился с исключением: ``` '.$e->getMessage().'```'."\r\n\r\n".$mess;
+            $subscriber_ids = [$this->getAdminChatId()];
+        }
+
+        $answers = array();
+        $ok = true;
+        if (count($subscriber_ids)){
+
+            // В случае ответа на ранее сохраненное сообщение необходимо его найти в базе
+            $teleSavesMap = [];
+            if (isset($params['load_id'])){
+                $load_idents_arr=[];
+                if (strpos($params['load_id'],',')){
+                    $load_idents_arr = explode(',', $params['load_id']);
+                }else{
+                    $load_idents_arr[] =$params['load_id'];
+                }
+                foreach($load_idents_arr as $load_ident) {
+                    $teleSaves = $this->telegramSaveRepository->findBy(['ident' => $load_ident]);
+                    if (count($teleSaves)) {
+                        foreach ($teleSaves as $teleSave) {
+                            $teleSavesMap[$teleSave->getUserChatId()] = $teleSave;
+                        }
+                        break; // Используем load_id иденты только один в порядке приоритетности из списка!!!
+                    }
+                }
+            }
+
+            // Выполняем поочередную отправку телеграм сообщений всем пользователям пока не наткнемся на ошибку
+            foreach($subscriber_ids as $user_id){
+                // Отправляем всем получателям, если не произойдет никакой ошибки
+                // в 99,99% если произошла ошибка то либо сервер мертв либо ошибка в тексте и остальные не отправятся тоже
+                if ($ok){
+                    $data = ['text'=>$mess];
+
+                    // В случае ответа на сообщение редактируем его в чате!
+
+                    if (isset($teleSavesMap[$user_id]) && isset($params['add_text']) && $params['add_text']!=''){
+                        // Изменяем начальное сообщение
+                        //$teleSavesMap[$user_id]->setMess($teleSavesMap[$user_id]->getMess()."\r\n[__________________________________]\r\n".$params['add_text']);
+                        $teleSavesMap[$user_id] = $this->telegramSaveRepository->updateMess($teleSavesMap[$user_id], $teleSavesMap[$user_id]->getMess()."\r\n".$this->add_reply_emoji.$params['add_text']);
+                        $pre_ans = $this->sendMess($user_id, array_merge($data, [
+                            'message_id'=>$teleSavesMap[$user_id]->getMessageId(),
+                            'text'=>$teleSavesMap[$user_id]->getMess()
+                        ]), 'editMessageText');
+
+                    }
+                    // Не важно изменяли прошлое или нет, на него надо сослаться
+                    if (isset($teleSavesMap[$user_id])){
+                        // Делаем новое сообщение ответом на предыдущее
+                        $data['reply_to_message_id']=$teleSavesMap[$user_id]->getMessageId();
+                    }
+
+                    // отправляем само сообщение
+                    $ans = $this->sendMess($user_id, $data);
+
+                    if (!isset($ans['ok']) || !$ans['ok']){$ans['ok']=false;
+                        $ok = false;
+                        /*
+                        file_put_contents(__DIR__."/../../var/log/telegram_fails.txt",
+                            "\r\n\r\n\r\n".'---------------------- '.date("Y-m-d H:i:S").' ----------------------'."\r\n".
+                            'send_to: '.$user_id."\r\n".
+                            'text: '.$data['text']."\r\n".
+                            "\r\n".
+                            'ans: '."\r\n".
+                            print_r($this->last_ans, true));
+                        */
+                    }else{
+                        // Если была инструкция сохранить сообщение под идентом
+                        if (isset($params['save_id'])){
+                            // Если надо сохраняем каждое отправленное сообщение отдельно, пусть орм подавится.
+                            $this->telegramSaveRepository->newSave($params['save_id'], $ans['result']['chat']['id'], $ans['result']['message_id'], $mess);
+
+                            $this->logger->debug('TelegramSave by ident: '.$params['save_id'].' for: '.$user_id);
+                        }
+                    }
+                    $answers[]=$ans;
+                }
+            }
+        }
+        return $answers;
+    }
+
+
     /**
      * Отправка запроса API Telegram
      * @param string $method
@@ -345,7 +470,7 @@ dd([$origin_str, array_map(function($item) {
      * @param bool $cut_mode Задача, если не удалось отправить сообщение, то отправляем урезанную версию без форматирования тому же получателю
      * @return array|mixed
      */
-    protected function query(string $method, $params=array(), $cut_mode=false): array{
+    private function query(string $method, $params=array(), $cut_mode=false): array{
 
         $url = $this->config['url'];
         $url .=$this->config['token'];
@@ -439,149 +564,6 @@ dd([$origin_str, array_map(function($item) {
         }
     }
 
-    /**
-     * @return array
-     */
-    public function getDebug(): array{
-        return $this->debug;
-    }
-
-    /**
-     * @return int
-     */
-    public function getAdminChatId(){
-        return $this->config['admin_chat_id'];
-    }
-
-
-    //------------------------------------------------------------------------------------------------------------------
-    //------------------------------------------------------------------------------------------------------------------
-    //------------------------------------------------------------------------------------------------------------------
-    //------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-    /*
-     * Подписываем пользователя на подписку
-     */
-    public function addUserSubscribe($user_chat_id, $name){
-        $this->db->executeStatement('INSERT INTO telegram_users_list SET datein=now(), user_chat_id=?, name=?, active=1',
-            array_values(array('user_chat_id'=>$user_chat_id, 'name'=>$name)));
-        return $this;
-    }
-
-    /**
-     * Осуществить рассылку по эвенту, сообщение с переносом строк
-     * @param string $event
-     * @param string $mess
-     * @return array
-     */
-    public function event(string $event, string $mess, $params=[]): array{
-
-//        $mess = '``` '.$event.'```'."\r\n".$mess;
-//        $mess .= "\r\n".'/remove'.$event.' - отписаться от рассылки';
-
-        $mess = str_replace(array('<br>'), array("\r\n"), $mess);
-        $event = mb_convert_case(addslashes($event), MB_CASE_TITLE); // зачем addslashes? можно же порезать всё лишнее
-
-        // Будем ронять скрипт если попытались отправить несуществующий евент, а у нас strict mode
-        if (!array_key_exists($event, $this->getEvents()) && $this->config['wrong_event_exception']) {
-            throw new \Exception('Event "'.$event.'" not found, try app:telegram --init for repair');
-        }
-
-        //wrong_event_exception
-
-        // почему выборка юзверей не через функцию а прям тут?
-        // повышаем живучесть механизма, если слетела базка, отправляем весточку админу!
-        try {
-            $statement = $this->db->prepare('SELECT name, user_chat_id, DATE_FORMAT(datein, "%d.%m.%Y") as datein FROM telegram_users_list WHERE name="' . $event . '" AND active=1');
-            $result = $statement->executeQuery();
-            $userlist = $result->fetchAllAssociative();
-        }catch (\Exception $e){
-            $mess = '*Ошибка рассылки сообщений!*'."\r\n".'Запрос подписчиков на событие '.$event.' провалился с исключением: ``` '.$e->getMessage().'```'."\r\n\r\n".$mess;
-            $userlist = [['user_chat_id'=>$this->getAdminChatId()]];
-        }
-
-        $answers = array();
-        $ok = true;
-        if (count($userlist)){
-
-            // В случае ответа на ранее сохраненное сообщение необходимо его найти в базе
-            $teleSavesMap = [];
-            if (isset($params['load_id'])){
-                $load_idents_arr=[];
-                if (strpos($params['load_id'],',')){
-                    $load_idents_arr = explode(',', $params['load_id']);
-                }else{
-                    $load_idents_arr[] =$params['load_id'];
-                }
-                foreach($load_idents_arr as $load_ident) {
-                    $teleSaves = $this->telegramSaveRepository->findBy(['ident' => $load_ident]);
-                    if (count($teleSaves)) {
-                        foreach ($teleSaves as $teleSave) {
-                            $teleSavesMap[$teleSave->getUserChatId()] = $teleSave;
-                        }
-                        break; // Используем load_id иденты только один в порядке приоритетности из списка!!!
-                    }
-                }
-            }
-
-            // Выполняем поочередную отправку телеграм сообщений всем пользователям пока не наткнемся на ошибку
-            foreach($userlist as $row){
-                // Отправляем всем получателям, если не произойдет никакой ошибки
-                // в 99,99% если произошла ошибка то либо сервер мертв либо ошибка в тексте и остальные не отправятся тоже
-                if ($ok){
-                    $data = ['text'=>$mess];
-
-                    // В случае ответа на сообщение редактируем его в чате!
-
-                    if (isset($teleSavesMap[$row['user_chat_id']]) && isset($params['add_text']) && $params['add_text']!=''){
-                        // Изменяем начальное сообщение
-                        //$teleSavesMap[$row['user_chat_id']]->setMess($teleSavesMap[$row['user_chat_id']]->getMess()."\r\n[__________________________________]\r\n".$params['add_text']);
-                        $teleSavesMap[$row['user_chat_id']] = $this->telegramSaveRepository->updateMess($teleSavesMap[$row['user_chat_id']], $teleSavesMap[$row['user_chat_id']]->getMess()."\r\n".$this->add_reply_emoji.$params['add_text']);
-                        $pre_ans = $this->sendMess($row['user_chat_id'], array_merge($data, [
-                            'message_id'=>$teleSavesMap[$row['user_chat_id']]->getMessageId(),
-                            'text'=>$teleSavesMap[$row['user_chat_id']]->getMess()
-                        ]), 'editMessageText');
-
-                    }
-                    // Не важно изменяли прошлое или нет, на него надо сослаться
-                    if (isset($teleSavesMap[$row['user_chat_id']])){
-                        // Делаем новое сообщение ответом на предыдущее
-                        $data['reply_to_message_id']=$teleSavesMap[$row['user_chat_id']]->getMessageId();
-                    }
-
-                    // отправляем само сообщение
-                    $ans = $this->sendMess($row['user_chat_id'], $data);
-
-                    if (!isset($ans['ok']) || !$ans['ok']){$ans['ok']=false;
-                        $ok = false;
-                        /*
-                        file_put_contents(__DIR__."/../../var/log/telegram_fails.txt",
-                            "\r\n\r\n\r\n".'---------------------- '.date("Y-m-d H:i:S").' ----------------------'."\r\n".
-                            'send_to: '.$row['user_chat_id']."\r\n".
-                            'text: '.$data['text']."\r\n".
-                            "\r\n".
-                            'ans: '."\r\n".
-                            print_r($this->last_ans, true));
-                        */
-                    }else{
-                        // Если была инструкция сохранить сообщение под идентом
-                        if (isset($params['save_id'])){
-                            // Если надо сохраняем каждое отправленное сообщение отдельно, пусть орм подавится.
-                            $this->telegramSaveRepository->newSave($params['save_id'], $ans['result']['chat']['id'], $ans['result']['message_id'], $mess);
-
-                            $this->logger->debug('TelegramSave by ident: '.$params['save_id'].' for: '.$row['user_chat_id']);
-                        }
-                    }
-                    $answers[]=$ans;
-                }
-            }
-        }
-        return $answers;
-    }
 
 
 
@@ -589,41 +571,6 @@ dd([$origin_str, array_map(function($item) {
 
 
 
-    public function findByPhone($phone){
-        $phone = str_replace("+", "", $phone);
-        $statement = $this->db->prepare('SELECT user_chat_id FROM telegram_users WHERE phone="'.$phone.'"');
-        $result = $statement->executeQuery();
-        $user = $result->fetchAssociative();
-        if ($user){
-            return $user['user_chat_id'];
-        }else{
-            return null;
-        }
-    }
-
-    /**
-     * Позволяем пользователю самому притворятся любым телефоном
-     * Метод позволяет вставить любую дичь, так что все проверки, пожалуйста, на стороне.
-     * Этим же методом затирать телефон.
-     * Единственно на всякий случай режем по длине, чтобы не допустить mysql ошибку
-     * @param $user_chat_id
-     * @param $phone
-     * @return $this
-     * @throws Exception
-     */
-    public function setUserPhone($user_chat_id, $phone){
-        $this->db->executeStatement('UPDATE telegram_users SET phone=? WHERE user_chat_id=?',
-            array_values(array('phone'=>substr($phone, 0, 12), 'user_chat_id'=>$user_chat_id)));
-        $this->cache->delete('telegram_users');
-        return $this;
-    }
-
-    public function setUser($user_chat_id, $id_user, $phone=''){
-        $this->db->executeStatement('UPDATE telegram_users SET id_user=?, phone=? WHERE user_chat_id=?',
-            array_values(array('id_user'=>$id_user, 'phone'=>substr($phone, 0, 12), 'user_chat_id'=>$user_chat_id)));
-        $this->cache->delete('telegram_users');
-        return $this;
-    }
 
 
 
@@ -647,14 +594,6 @@ dd([$origin_str, array_map(function($item) {
     }
 
 
-
-
-
-
-
-
-
-
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// // NEW
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -669,15 +608,6 @@ dd([$origin_str, array_map(function($item) {
         return $this->telegramUserRepository->getUsers($force);
     }
 
-    /**
-     * Выборка подписки, она либо есть, либо ее нет
-     * +
-     * @param $user_chat_id
-     * @param $name
-     * @return false|array
-     * @throws Exception
-     * @throws \Doctrine\DBAL\Driver\Exception
-     */
     public function getUserEvent($user_chat_id, $event_name){
         return $this->telegramUserEventRepository->getUserEvent($user_chat_id, $event_name);
     }
@@ -686,23 +616,10 @@ dd([$origin_str, array_map(function($item) {
         return $this->telegramUserEventRepository->getUserEvents($user_chat_id);
     }
 
-    /**
-     * Сменить флаг подписки
-     * @param $user_chat_id
-     * @param $name
-     * @param $active
-     * @return $this
-     * @throws Exception
-     */
     public function setActive($user_chat_id, $event_name, $active){
         return $this->telegramUserEventRepository->setActive($user_chat_id, $event_name, $active);
     }
 
-    /**
-     *
-     * @param $arr
-     * @return void
-     */
     public function saveMessage($message, $update_id){
         $this->telegramMessageRepository->newMessage($message, $update_id);
 
@@ -710,8 +627,6 @@ dd([$origin_str, array_map(function($item) {
 
     public function checkUser($message){
         $this->telegramUserRepository->checkUser($message);
-
-
     }
 
     public function addUser($arr){
@@ -728,6 +643,16 @@ dd([$origin_str, array_map(function($item) {
      */
     public function setSuperuser($id){
         $this->telegramUserRepository->setSuperuser($id);
+    }
+
+
+    public function setUserPhone($user_chat_id, $phone){
+        $this->telegramUserRepository->setUserPhone($user_chat_id, $phone);
+    }
+
+    //public function setUser($user_chat_id, $id_user, $phone=''){
+    public function linkUser($user_chat_id, $id_user, $phone=''){
+        $this->telegramUserRepository->linkUser($user_chat_id, $id_user, $phone='');
     }
 
 

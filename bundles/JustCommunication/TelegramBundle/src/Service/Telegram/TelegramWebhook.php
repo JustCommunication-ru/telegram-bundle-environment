@@ -343,7 +343,7 @@ class TelegramWebhook
                     // В юзерах мы сохраняем телефон с плюсиком
                     $user = $this->userRepository->findByUserPhone('+'.$tel);
                     if ($user){
-                        $this->telegram->setUser($this->user['user_chat_id'], $user->getId(), $tel);
+                        $this->telegram->linkUser($this->user['user_chat_id'], $user->getId(), $tel);
                         //$this->telegram->setUserPhone($this->user['user_chat_id'], $tel);
 
                         //$text = 'Отлично, ' . $this->user['first_name'] . ' теперь Вам доступен новый функционал.';
@@ -380,7 +380,7 @@ class TelegramWebhook
                             // возможно тут понадобится обновление номера телефона??
                             $text .= 'Личный кабинет с номером телефона ' . $tel . ' уже привязан к контакту ' . ($users[$chat_id]['username'] ? "@" . $users[$chat_id]['username'] : $chat_id) . '! ``` Привелегия суперпользователя!```';
                         }else{
-                            $this->telegram->setUser($chat_id, $user->getId(), $tel);
+                            $this->telegram->linkUser($chat_id, $user->getId(), $tel);
                             $text .= 'Личный кабинет с номером телефона ' . $tel . ' успешно привязан к контакту ' . ($users[$chat_id]['username'] ? "@" . $users[$chat_id]['username'] : $chat_id) . '! ``` Привелегия суперпользователя!```';
                         }
                     }else{

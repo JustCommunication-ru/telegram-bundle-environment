@@ -32,6 +32,11 @@ class TelegramUserRepository extends ServiceEntityRepository
 
     }
 
+    /**
+     * Пока как массив массивов, потом можно будет строить массив сущностей
+     * @param $force
+     * @return mixed
+     */
     public function getUsers($force = false){
         $callback = function(){
 
@@ -67,17 +72,23 @@ class TelegramUserRepository extends ServiceEntityRepository
     }
 
 
+    /**
+     * Проверка отправителя сообщения, если такого пользователя еще не было - добавляем, иначе обновляем при необходимости
+     * @param $message
+     * @return TelegramUser|null
+     */
     public function checkUser($message){
         $users = $this->getUsers();
         if (!array_key_exists($message['from']['id'], $users)) {
-            $this->addUser($message['from']);
+            $user = $this->addUser($message['from']);
         }elseif (
             (isset($message['from']['first_name']) && $message['from']['first_name']!='' && ($users[$message['from']['id']]['first_name']==''||$users[$message['from']['id']]['first_name']=='-') )
             ||
             (isset($message['from']['username']) && $message['from']['username']!='' && ($users[$message['from']['id']]['username']==''|| $users[$message['from']['id']]['username']=='-'))){
             // Небольшой хак на случай, если у нас не было инфы о пользователе (например его ручками добавили)
-            $this->updateUser($message['from']);
+            $user = $this->updateUser($message['from']);
         }
+        return $user;
     }
 
 
@@ -105,14 +116,15 @@ class TelegramUserRepository extends ServiceEntityRepository
             }
             // сбросим в любом сучае. раз нас сюда послали, значит в кэше нет записи.
             $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+            return $user;
+        }else{
+            return null;
         }
     }
 
     /**
      * Обновление информации о пользователе
      * @param $arr
-     * @return void
-     * @throws \Psr\Cache\InvalidArgumentException
      */
     public function updateUser($arr){//message.from
         if (isset($arr['id'])&& $arr['id']>0){
@@ -132,16 +144,20 @@ class TelegramUserRepository extends ServiceEntityRepository
 
             // обновился один юзер, а сбрасывать весь список
             $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+        }else{
+            $user=null;
         }
+        return $user;
     }
 
     /**
      * Сделать пользователя суперюзером
-     * @param $id
+     * @param $user_chat_id
+     * @return TelegramUser|null
      */
-    public function setSuperuser($id){
+    public function setSuperuser($user_chat_id){
 
-        $user = $this->findOneBy(['userChatId'=>$id]);
+        $user = $this->findOneBy(['userChatId'=>$user_chat_id]);
 
         if (!is_null($user)){
             $user->setSuperuser(true);
@@ -151,5 +167,54 @@ class TelegramUserRepository extends ServiceEntityRepository
             // то что? ошибка?
         }
         $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+        return $user;
+    }
+
+    /**
+     * Позволяем пользователю самому притворятся любым телефоном
+     * Метод позволяет вставить любую дичь, так что все проверки, пожалуйста, на стороне.
+     * Этим же методом затирать телефон.
+     * Единственно на всякий случай режем по длине, чтобы не допустить mysql ошибку
+     * @param $user_chat_id
+     * @param $phone
+     */
+    public function setUserPhone($user_chat_id, $phone){
+
+        $user = $this->findOneBy(['userChatId'=>$user_chat_id]);
+
+        if (!is_null($user)){
+            $user->setPhone($phone);
+            $this->em->persist($user);
+            $this->em->flush();
+        }else{
+            // то что? ошибка?
+        }
+        $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+        return $user;
+    }
+
+    /**
+     * Привязка пользователя системы к пользователю телеграм
+     * @param $user_chat_id
+     * @param $id_user
+     * @param $phone
+     * @return TelegramUser|null
+     * @throws \Psr\Cache\InvalidArgumentException
+     */
+    public function linkUser($user_chat_id, $id_user, $phone=''){
+        $user = $this->findOneBy(['userChatId'=>$user_chat_id]);
+
+        if (!is_null($user)){
+            $user->setIdUser($id_user);
+            if ($phone!='') {
+                $user->setPhone($phone);
+            }
+            $this->em->persist($user);
+            $this->em->flush();
+        }else{
+            // то что? ошибка?
+        }
+        $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+        return $user;
     }
 }

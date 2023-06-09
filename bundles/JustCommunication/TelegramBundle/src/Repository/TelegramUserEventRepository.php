@@ -20,6 +20,7 @@ class TelegramUserEventRepository extends ServiceEntityRepository
 {
     use CacheTrait;
     private EntityManagerInterface $em;
+    const CACHE_NAME = 'telegram_user_events';
 
     public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em, FuncHelper $funcHelper)
     {
@@ -66,6 +67,28 @@ class TelegramUserEventRepository extends ServiceEntityRepository
         return $rows;
     }
 
+
+    /**
+     * Выборка подписчиков на событие
+     * @param $user_chat_id
+     * @return array
+     */
+    public function getEventUserIds($event_name, $force=false):array{
+        $map = $this->getAllUserEvents($force);
+        return $map[$event_name]??[];
+    }
+
+    public function getAllUserEvents($force=false){
+        $callback = function(){
+            $rows = $this->em->createQuery('
+                SELECT ue FROM JustCommunication\TelegramBundle\Entity\TelegramUserEvent ue
+                WHERE ue.active=1
+            ')->getArrayResult();
+            return FuncHelper::array_foreach($rows, 'userChatId', 'name', true);
+        };
+        return $this->cached(self::CACHE_NAME, $callback, $force);
+    }
+
     /**
      * Включение/отключение подписки
      * @param $user_chat_id
@@ -84,6 +107,7 @@ class TelegramUserEventRepository extends ServiceEntityRepository
             ->setParameter('event_name', $event_name)
             ->setParameter('active', $active)
             ->execute();
+        $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
 
         /*
         $query = $this->em->createQuery('
@@ -109,6 +133,24 @@ class TelegramUserEventRepository extends ServiceEntityRepository
         //return $u_affected_rows;
 
         return $res;
+    }
+
+    /*
+     * addUserSubscribe
+     * Подписываем пользователя на подписку
+     */
+    public function newUserEvent($user_chat_id, $name){
+        $user = new TelegramUserEvent();
+        $user->setUserChatId($user_chat_id)
+            ->setDatein(new \DateTime())
+            ->setName($name)
+            ->setActive(1);
+        $this->em->persist($user);
+        $this->em->flush();
+
+        $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
+
+        return $user;
     }
 
 

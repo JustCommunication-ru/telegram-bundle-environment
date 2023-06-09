@@ -263,7 +263,7 @@ class TelegramUser
      */
     public function setPhone(string $phone): self
     {
-        $this->phone = $phone;
+        $this->phone = substr($phone, 0, 12);
         return $this;
     }
 

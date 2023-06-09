@@ -1,44 +1,43 @@
 <?php
 
-namespace App\Command;
+namespace JustCommunication\TelegramBundle\Command;
 
-use App\Controller\TelegramController;
-use App\Kernel;
-use App\Repository\ClientPriceInRepository;
-use App\Service\CacheHelper;
-use App\Service\FuncHelper;
-use App\Service\SolrProducts;
-use App\Service\TelegramHelper;
-use Doctrine\DBAL\Connection;
-use Doctrine\ORM\EntityManagerInterface;
-use Solarium\Client;
-use Solarium\Core\Client\Adapter\Curl;
+
+use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
+
+use JustCommunication\TelegramBundle\Service\CacheHelper;
+use JustCommunication\TelegramBundle\Service\FuncHelper;
+use JustCommunication\TelegramBundle\Service\TelegramHelper;
+
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\EventDispatcher\EventDispatcher;
+
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use JustCommunication\TelegramBundle\Kernel;
+use Doctrine\DBAL\Connection;
 
 /**
  * Функционал работы с телеграм ботом на серверной стороне.
  * Здесь же методы для крон задач.
  */
-class CommandTelegram extends CommonCommand
+class CommandTelegram extends Command
 {
+
+    protected static $defaultName = 'jc:telegram:work';
 
     public $config;
     public $telegram;
     public $db;
     public $cache;
+    public TelegramUserRepository $telegramUserRepository;
 
-    public function __construct(ParameterBagInterface $params, TelegramHelper $telegramHelper, Connection $connection, CacheHelper $cacheHelper, KernelInterface $kernel, HttpClientInterface $client)
+    public function __construct(ParameterBagInterface $params, TelegramHelper $telegramHelper, Connection $connection, CacheHelper $cacheHelper, KernelInterface $kernel, HttpClientInterface $client, TelegramUserRepository $telegramUserRepository)
     {
         // а надо ли?
         $this->config = $params->get('telegram');
@@ -46,15 +45,18 @@ class CommandTelegram extends CommonCommand
         $this->db = $connection;
         $this->cache = $cacheHelper->getCache();
         $this->kernel = $kernel;
+        $this->telegramUserRepository = $telegramUserRepository;
+
 
         $this->curl = $client;
         parent::__construct();
     }
 
+    /*
     protected function configure()
     {
         $this
-            ->setName('app:telegram')
+            ->setName('jc:telegram:work')
             ->setDescription('Description')
             ->setHelp('Help')
 
@@ -95,6 +97,7 @@ class CommandTelegram extends CommonCommand
 
     }
 
+    */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
 
@@ -297,7 +300,12 @@ class CommandTelegram extends CommonCommand
 
                     $chatId = $this->telegram->getAdminChatId();
                     if($input->getOption('phoneFrom')){
-                        $chatId = $this->telegram->findByPhone($input->getOption('phoneFrom')) ;
+
+                        $user = $this->telegramUserRepository->findOneBy(['phone'=>str_replace("+", "", $input->getOption('phoneFrom'))]);
+                        if ($user){
+                            $chatId = $user->getUserChatId();
+                        }
+                        //chatId = $this->telegram->findByPhone($input->getOption('phoneFrom')) ;
                     }
 
                     $paramaters = array(

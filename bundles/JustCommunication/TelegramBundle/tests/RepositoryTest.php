@@ -59,4 +59,11 @@ class RepositoryTest extends KernelTestCase
         $res = $this->telegramUserEventRepository->setActive($user_chat_id, $event_name, $active);
         $this->assertTrue(true);// не понятно что проверять
     }
+
+    public function testTelegramGetEventUserIds(){
+        $event_name = 'Error';
+        $ids = $this->telegramUserEventRepository->getEventUserIds($event_name);
+        //var_dump($res);
+        $this->assertGreaterThan(1, count($ids));
+    }
 }
