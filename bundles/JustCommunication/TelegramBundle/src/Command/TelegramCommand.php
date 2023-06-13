@@ -17,38 +17,41 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 
 class TelegramCommand extends Command
 {
-    private $telegram;
-    private $kernel;
-    private $telegramUserRepository;
-    private $telegramEventRepository;
-    private $curl;
-
+    private TelegramHelper $telegram;
+    private KernelInterface $kernel;
+    private TelegramUserRepository $telegramUserRepository;
+    private TelegramEventRepository $telegramEventRepository;
+    //private HttpClientInterface $curl;
+    private UrlGeneratorInterface $router;
+    private InputInterface $input;
 
     public function __construct(
                                 TelegramHelper $telegramHelper,
-                                Connection $connection,
                                 CacheHelper $cacheHelper,
                                 KernelInterface $kernel,
-                                HttpClientInterface $client,
+                                //HttpClientInterface $client,
                                 TelegramUserRepository $telegramUserRepository,
-                                TelegramEventRepository $telegramEventRepository)
+                                TelegramEventRepository $telegramEventRepository,
+                                UrlGeneratorInterface $router
+
+    )
     {
         parent::__construct();
 
         $this->telegram = $telegramHelper;
-        $this->db = $connection;
         $this->cache = $cacheHelper->getCache();
         $this->kernel = $kernel;
         $this->telegramUserRepository = $telegramUserRepository;
         $this->telegramEventRepository = $telegramEventRepository;
 
-
-        $this->curl = $client;
+        //$this->curl = $client;
+        $this->router = $router;
 
     }
 
@@ -74,8 +77,6 @@ class TelegramCommand extends Command
             ->addOption('getUpdates', null, InputOption::VALUE_NONE, 'Action. get updates from Telegram.')
             ->addOption('send', null, InputOption::VALUE_OPTIONAL, 'Action. Send message by chat id. Use --mess/-m for text', 'EMPTY')
             ->addOption('event', null, InputOption::VALUE_OPTIONAL, 'Action (+value). Send message by event name. Use --mess/-m for text', 'EMPTY')
-            ->addOption('initlist', null, InputOption::VALUE_NONE, 'Action. debug:init telegram_list')
-            ->addOption('clearlist', null, InputOption::VALUE_NONE, 'Action. debug:clear telegram_list')
             ->addOption('test', null, InputOption::VALUE_NONE, 'Action. debug: foo')
             ->addOption('webhook', null, InputOption::VALUE_OPTIONAL, 'Action. Imitation of chat with bot, set your message in quotes!', 'EMPTY')
 
@@ -102,9 +103,10 @@ class TelegramCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $output->writeln('LALALA');
+        //$output->writeln('LALALA');
         $this->io = new SymfonyStyle($input, $output);
         $this->dev_debug_input = $input;
+        $this->input = $input;
 
 
         if ($input->getOption('init')) {
@@ -173,11 +175,7 @@ class TelegramCommand extends Command
             }else{
                 $this->io->error(['You need to set message (--mess) options']);
             }
-        }elseif ($input->getOption('clearlist')) {
-            $this->io->info('Action: clearlist');
-            $this->db->executeStatement('DELETE FROM telegram_list WHERE id>0');
-            $this->cache->delete('telegram_list');
-            $this->io->success('Inserted successfully');
+
         }elseif ($input->getOption('test')) {
             $this->io->info('Action: test');
 
@@ -281,7 +279,8 @@ class TelegramCommand extends Command
                 $_GET['command_request'] = '1';
                 $_GET['token'] = $this->telegram->config['token'];
 
-                $request = Request::create($this->telegram->config['webhook_url_path'], 'POST', array(), array(), array(), array(), json_encode($paramaters));
+                $webhook_url_path = $this->router->generate('jc_telegram_webhook');
+                $request = Request::create($webhook_url_path, 'POST', array(), array(), array(), array(), json_encode($paramaters));
                 $response = $this->kernel->handle($request, HttpKernelInterface::SUB_REQUEST);
 
                 die($response->getContent());
@@ -304,6 +303,7 @@ class TelegramCommand extends Command
      */
     private function telegramInit(){
 
+        $webhook_url_path = $this->router->generate('jc_telegram_webhook');
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// 1) проверка админа
@@ -319,13 +319,14 @@ class TelegramCommand extends Command
             $all_is_good_go_on_dude=false;
         }
         yield $all_is_good_go_on_dude;
-/*
+
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// 2) проверка связи с телеграммом
         $all_is_good_go_on_dude=2;
 
         $res = $this->telegram->getWebhookInfo();
         if ($res) {
+
             if ($res['ok']){
                 $this->io->success(['Real telegram server connection success ('.$this->telegram->config["url"].')']);
 
@@ -350,13 +351,15 @@ class TelegramCommand extends Command
                     }
                 }
             }else{
-                $this->io->caution(['Warning: bad response from telegram server, wrong pair "MODULES_TELEGRAM_BOT_NAME" / "MODULES_TELEGRAM_TOKEN"']);
+                //$this->io->caution(['Warning: bad response from telegram server, wrong pair "MODULES_TELEGRAM_BOT_NAME" / "MODULES_TELEGRAM_TOKEN"']);
+                $this->io->caution(['Warning: bad response from telegram server: "'.($res['error_code']??'').' '.($res['description']??'').'"']);
                 $this->io->block(['Check or set in .env / .env.local "MODULES_TELEGRAM_BOT_NAME"']);
                 $this->io->block(['Check or set in .env.local "MODULES_TELEGRAM_TOKEN"']);
                 $all_is_good_go_on_dude=false;
             }
         }else{
             $this->io->caution(['Warning: network error connect to telegram server ('.$this->telegram->config["url"].'), check your internet or link above.']);
+
             $all_is_good_go_on_dude=false;
         }
         yield $all_is_good_go_on_dude;
@@ -406,7 +409,7 @@ class TelegramCommand extends Command
         $this->io->success($_changes);
         yield $all_is_good_go_on_dude;
 
-*/
+
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// 5) Прописка пользователя телеграма
         $all_is_good_go_on_dude=5;
@@ -422,20 +425,21 @@ class TelegramCommand extends Command
                     'message_id' => 1,
                     'from' => array(
                         'id' => $admin_chat_id,
-                        'first_name' => 'MarketplaceAdmin',
-                        'username' => 'Marketplaceadmin'
+                        'first_name' => 'ProjectAdmin',
+                        'username' => 'Projectadmin'
                     ),
                     'text' => '/MakeMeGreatAgain',
                     'date' => date("U"),
                     'entities' => array()
                 )
             );
+
             $_GET['command_request'] = '1';
             $_GET['token'] = $this->telegram->config['token'];
-            $request = Request::create('/telegram'.$this->telegram->config['webhook_url_path'], 'POST', array(), array(), array(), array(), json_encode($paramaters));
+            $request = Request::create($webhook_url_path, 'POST', array(), array(), array(), array(), json_encode($paramaters));
             $response = $this->kernel->handle($request, HttpKernelInterface::SUB_REQUEST);
 
-            var_dump($response->getContent());
+
             $res = json_decode($response->getContent(), true);
             if ($res && isset($res['result']) && $res['result']=='ok'){
                 $users_new = $this->telegram->getUsers(true);
@@ -451,12 +455,13 @@ class TelegramCommand extends Command
                     $all_is_good_go_on_dude=false;
                 }
             }else{
-                var_dump($res);
-                $this->io->caution(['Warning: network error connect to telegram server on MakeMeGreatAgain.']);
+                $this->io->caution(['Warning: network error connect to telegram server on MakeMeGreatAgain.',
+                    $this->input->getOption('verbose')?$response->getContent(true):'Set --verbose for more details.']
+                );
+
                 $all_is_good_go_on_dude=false;
             }
         }
-        yield false;
 
         yield $all_is_good_go_on_dude;
 
@@ -468,13 +473,9 @@ class TelegramCommand extends Command
             $this->io->success(['Table "telegram_users" ok, telegram admin user already linked with user #'.$users[$admin_chat_id]['id_user']]);
         }else{
 
-            $statement = $this->db->prepare('SELECT *  FROM user WHERE JSON_CONTAINS(roles,\'"ROLE_SUPERUSER"\',"$")=1 ORDER BY id ASC LIMIT 1');
-            $result = $statement->executeQuery();
-            $rows = $result->fetchAllAssociative();
-
-            if (is_array($rows)){
-                $user = array_pop($rows);
-                $this->io->success(['Superuser found in table "user" with phone '.$user['phone']]);
+            $superuser = $this->telegram->findProjectUserBySuperuser();
+            if (is_array($superuser)){
+                $this->io->success(['Superuser found in table "user" with phone '.$superuser['phone']]);
 
                 $paramaters = array(
                     'update_id' => 1,
@@ -486,29 +487,33 @@ class TelegramCommand extends Command
                             'username' => 'Marketplaceadmin'
                         ),
                         'contact' => array(
-                            'phone_number' => $user['phone'],
+                            'phone_number' => $superuser['phone'],
                             'first_name' => 'MarketplaceAdmin',
                             'user_id'=>$admin_chat_id
                         ),
                         'date' => date("U"),
                     )
                 );
+
+
                 $_GET['command_request'] = '1';
                 $_GET['token'] = $this->telegram->config['token'];
-                $request = Request::create($this->telegram->config['webhook_url_path'], 'POST', array(), array(), array(), array(), json_encode($paramaters));
+                $request = Request::create($webhook_url_path, 'POST', array(), array(), array(), array(), json_encode($paramaters));
                 $response = $this->kernel->handle($request, HttpKernelInterface::SUB_REQUEST);
 
                 $res = json_decode($response->getContent(), true);
                 if ($res && isset($res['result']) && $res['result']=='ok'){
                     $users_new = $this->telegram->getUsers(true);
-                    if (isset($users_new[$admin_chat_id]) && $users_new[$admin_chat_id]['id_user']==$user['id']){
-                        $this->io->success(['Table "telegram_users" updated, telegram admin user linked with user #'.$user['id']]);
+                    if (isset($users_new[$admin_chat_id]) && $users_new[$admin_chat_id]['id_user']==$superuser['id']){
+                        $this->io->success(['Table "telegram_users" updated, telegram admin user linked with user #'.$superuser['id']]);
                     }else{
                         $this->io->caution(['Warning: send contact failed.']);
                         $all_is_good_go_on_dude=false;
                     }
                 }else{
-                    $this->io->caution(['Warning: network error connect to telegram server on send contact.']);
+                    $this->io->caution(['Warning: network error connect to telegram server on send contact.',
+                            $this->input->getOption('verbose')?$response->getContent(true):'Set --verbose for more details.']
+                    );
                     $all_is_good_go_on_dude=false;
                 }
 
@@ -518,44 +523,42 @@ class TelegramCommand extends Command
             }
         }
 
-        //'JSON_CONTAINS(roles,'"AUTH"','$')=1';
-        // ROLE_SUPERUSER
+
         yield $all_is_good_go_on_dude;
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// 7) Подписываемся на всё что можно, можно через апи телеграм сделать, можно прям тут ручками
         $all_is_good_go_on_dude=7;
 
-        //$this->telegram->getUserSubscribes($admin_chat_id) не подходит, потому что надо с active=0 тоже
-        $statement = $this->db->prepare('SELECT id, user_chat_id, name, active, DATE_FORMAT(datein, "%d.%m.%Y") as datein FROM telegram_users_list WHERE user_chat_id='.$admin_chat_id.'');
-        $result = $statement->executeQuery();
-        $mylist = FuncHelper::array_foreach($result->fetchAllAssociative(), true, 'name');
 
-        $__changes = ['Subscribe admin for all list. Table "telegram_users_list" update successfuly:'];
-        foreach ($preset as $name=>$item){
-            if (isset($mylist[$name])){
-                if ($mylist[$name]['active']==1) {
+        $list = $this->telegram->getUserEvents($admin_chat_id);
+
+
+        $__changes = ['Subscribe admin for all list. Table "'.$this->telegram->telegramUserEventRepository->getClassName().'" update successfuly:'];
+        foreach ($preset as $item){
+            $name = $item['name'];
+            if (isset($list[$name])){
+                if ($list[$name]->isActive()) {
                     $__changes[$name] = '"'.$name.'" already subscribed';
                 }else{
-                    $this->db->executeStatement('UPDATE telegram_users_list SET active=1 WHERE `user_chat_id`=? AND `name`=?',
-                        array_values(array('user_chat_id' => $admin_chat_id, 'name' => $name)));
+                    $this->telegram->setActive($admin_chat_id, $name, 1);
                     $__changes[$name] = '"'.$name.'" subscribe activated';
                 }
             }else{
-                $this->db->executeStatement('INSERT INTO telegram_users_list SET `datein`=now(), `user_chat_id`=?, `name`=?, `active`=1',
-                    array_values(array('user_chat_id' => $admin_chat_id, 'name' => $name)));
+                $this->telegram->newUserEvent($admin_chat_id, $name);
                 $__changes[$name] = '"'.$name.'" subscribed successfuly';
             }
         }
         $this->io->success($__changes);
 
+        yield false;
         yield $all_is_good_go_on_dude;
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// Отправка контакта (привязка телефона к контакту) админа
         $all_is_good_go_on_dude=9;
-
-        foreach ($preset as $name=>$item) {
+        foreach ($preset as $item) {
+            $name = $item['name'];
             $this->telegram->event($name, 'Сообщение на событие "'.$name.'"');
         }
 

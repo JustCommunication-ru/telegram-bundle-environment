@@ -44,4 +44,12 @@ class TelegramSaveRepository extends ServiceEntityRepository
         $this->em->flush();
         return $teleSave;
     }
+
+    /**
+     * Имя таблицы с которой работает репозиторий
+     * @return string
+     */
+    public function getTableName(){
+        return $this->getClassMetadata()->getTableName();
+    }
 }

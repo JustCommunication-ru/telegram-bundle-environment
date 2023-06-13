@@ -62,4 +62,12 @@ class TelegramEventRepository extends ServiceEntityRepository
         return $event;
     }
 
+    /**
+     * Имя таблицы с которой работает репозиторий
+     * @return string
+     */
+    public function getTableName(){
+        return $this->getClassMetadata()->getTableName();
+    }
+
 }

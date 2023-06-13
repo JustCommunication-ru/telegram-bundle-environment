@@ -113,16 +113,6 @@ class Configuration implements ConfigurationInterface
                             ->defaultValue('')
                         ->end()
 
-                        ->scalarNode('webhook_url_path')
-                            ->info('URL on project to process messages from API, by default it is "/telegram/webhook"')
-                            ->defaultValue('/telegram/webhook')
-                        ->end()
-
-                        ->scalarNode('user_link_url_path')
-                            ->info('URL for link project user to telegram user, by default it is  "/user/telegram/link/hashplace"')
-                            ->defaultValue('/user/telegram/link/hashplace')
-                        ->end()
-
                         ->booleanNode('wrong_event_exception')
                             ->info('Script will be fail if not existing event sent. This options something like strict mode')
                             ->defaultTrue()

@@ -55,8 +55,8 @@ class NewController extends AbstractController{
 
 
 
-        $x = $eventRepository->getEvents(true);
-        var_dump($x);
+        //$x = $eventRepository->getEvents(true);
+        //var_dump($x);
 
 /*
         $t =  \DateTime::createFromFormat("U",1649120903);

@@ -43,13 +43,21 @@ class TelegramMessageRepository extends ServiceEntityRepository
             $telegramMessage->setUpdateId($update_id)
                 ->setMessageId($message['message_id'])
                 ->setUserChatId($message['from']['id'])
-                ->setDate(new \DateTime(date("Y-m-d H:i:s", 1649120903)))
+                ->setDatein(new \DateTime(date("Y-m-d H:i:s", 1649120903)))
                 ->setMess(($message['text'] ?? '') . (isset($message['contact']) ? json_encode($message['contact']) : ''))
                 ->setEntities(isset($message['entities']) ? json_encode($message['entities']) : '')
             ;
             $this->em->persist($telegramMessage);
             $this->em->flush();
         }
+    }
+
+    /**
+     * Имя таблицы с которой работает репозиторий
+     * @return string
+     */
+    public function getTableName(){
+        return $this->getClassMetadata()->getTableName();
     }
 
 }

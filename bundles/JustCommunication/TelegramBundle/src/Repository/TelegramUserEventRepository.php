@@ -52,19 +52,46 @@ class TelegramUserEventRepository extends ServiceEntityRepository
     }
 
     /**
-     * Все АКТИВНЫЕ подписки пользовтеля
+     * Все подписки пользовтеля, $active=1 - АКТИВНЫЕ
+     * В качестве ключей названия подписок
      * @param $user_chat_id
-     * @return array
+     * @param bool $active
+     * @return TelegramUserEvent[]
      */
-    public function getUserEvents($user_chat_id):array{
+    public function getUserEvents($user_chat_id, $active=false):array{
+
+        $qb = $this->createQueryBuilder('ue')
+            ->where('ue.userChatId=:userChatId')
+            ->setParameter('userChatId', $user_chat_id)
+            ;
+
+        if ($active!==false && ($active==1 || $active==0)) {
+            $qb->andWhere('ue.active=:active')
+                ->setParameter('active', $active);
+        }
+
+        $query = $qb->getQuery();
+        $res =  $query->execute();
+
+        $list = [];
+        foreach ($res as $event){
+            $list[$event->getName()] = $event;
+        }
+        return $list;
+
+        /*
         $rows = $this->em->createQuery('
             SELECT ue FROM JustCommunication\TelegramBundle\Entity\TelegramUserEvent ue
             WHERE ue.userChatId=:userChatId AND ue.active=1
             ')
+
             ->setParameter('userChatId', $user_chat_id)
             //->getArrayResult();
             ->getResult();
+
+
         return $rows;
+        */
     }
 
 
@@ -151,6 +178,14 @@ class TelegramUserEventRepository extends ServiceEntityRepository
         $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
 
         return $user;
+    }
+
+    /**
+     * Имя таблицы с которой работает репозиторий
+     * @return string
+     */
+    public function getTableName(){
+        return $this->getClassMetadata()->getTableName();
     }
 
 

@@ -1,8 +1,7 @@
 <?php
 
-namespace JustCommunication\TelegramBundle\Service\Telegram;
+namespace JustCommunication\TelegramBundle\Service;
 
-use JustCommunication\TelegramBundle\Repository\UserRepository;
 use JustCommunication\TelegramBundle\Service\FuncHelper;
 use JustCommunication\TelegramBundle\Service\SmsAeroHelper;
 use JustCommunication\TelegramBundle\Service\TelegramHelper;
@@ -24,6 +23,7 @@ class TelegramWebhook
      * @var String
      */
     private $mess;
+
     /**
      * @var TelegramHelper
      */
@@ -39,36 +39,12 @@ class TelegramWebhook
      */
     private $smsAeroHelper;
 
-    /**
-     * @var UserRepository
-     */
-    private $userRepository;
-
-
-    //public $remove_keyboard = false;
-
-
-
-    public function setTelegramHelper(TelegramHelper $telegram)
+    public function __construct(TelegramHelper $telegram, ParameterBagInterface $services_yaml_params, SmsAeroHelper $smsAeroHelper)
     {
         $this->telegram = $telegram;
-    }
-
-    public function setServicesYamlParams(ParameterBagInterface $services_yaml_params)
-    {
         $this->services_yaml_params = $services_yaml_params;
-    }
-
-    public function setSmsAeroHelper(SmsAeroHelper $smsAeroHelper)
-    {
         $this->smsAeroHelper = $smsAeroHelper;
     }
-
-    public function setUserRepository(UserRepository $userRepository)
-    {
-        $this->userRepository = $userRepository;
-    }
-
 
 
     public function setUser($user){
@@ -341,7 +317,7 @@ class TelegramWebhook
             if (strlen($tel)==11){
                 if ($chat_id==$this->user['user_chat_id']) {
                     // В юзерах мы сохраняем телефон с плюсиком
-                    $user = $this->userRepository->findByUserPhone('+'.$tel);
+                    $user = $this->telegram->telegramUserRepository->findProjectUserByPhone('+'.$tel);
                     if ($user){
                         $this->telegram->linkUser($this->user['user_chat_id'], $user->getId(), $tel);
                         //$this->telegram->setUserPhone($this->user['user_chat_id'], $tel);
@@ -374,7 +350,7 @@ class TelegramWebhook
                         $text='';
                     }
 
-                    $user = $this->userRepository->findByUserPhone('+'.$tel);
+                    $user = $this->telegram->telegramUserRepository->findProjectUserByPhone('+'.$tel);
                     if ($user){
                         if ($users[$chat_id]['id_user']==$user->getId()) {
                             // возможно тут понадобится обновление номера телефона??
@@ -424,7 +400,7 @@ class TelegramWebhook
                 ;
         }
         $this->telegram->setSuperuser($this->user['user_chat_id']);
-        return 'Двери в нарнию отныне навсегда открыты для Вас';
+        return 'Двери в нарнию отныне навсегда открыты для Вас. Роль Superuser успешно активирована.';
     }
     // по идее эта команда нужна только обычному пользователю, но нет, нужно чтобы она была доступна под любым пользователем иначе ломаются скрипты
     public function MakeMeGreatAgainSuperuserCommand($params = []){
@@ -445,9 +421,9 @@ class TelegramWebhook
                 ;
         }
 
-        $my_list = $this->telegram->getUserSubscribes($this->user['user_chat_id']);
+        $my_list = $this->telegram->getUserEvents($this->user['user_chat_id'], 1);
         if (count($my_list)){
-            $list = $this->telegram->getList(); //подписки
+            $list = $this->telegram->getEvents(); //подписки
             //var_dump($my_list);
             //var_dump($ml);
 
@@ -473,7 +449,7 @@ class TelegramWebhook
     /**
      * Отображает список пользователей
      * @param $params
-     * @return string
+     * @return string | string[]
      */
     public function getUsersSuperuserCommand($params = []){
         $roles = array('user', 'manager', 'superuser');
@@ -589,7 +565,7 @@ class TelegramWebhook
                 .'`'.$this->getCommandName(__FUNCTION__).'`' ."\r\n"
                 ;
         }
-        $list = $this->telegram->getList();
+        $list = $this->telegram->getEvents();
         $addList = array();
         $removeList = array();
         foreach ($list as $name => $item){
@@ -650,7 +626,6 @@ class TelegramWebhook
      * Статистика отправки смс
      * @param $params
      * @return string
-     * @throws \Doctrine\DBAL\Exception
      */
     public function smsStatSuperuserCommand($params = []){
         if ($this->isHelpMode($params)) {

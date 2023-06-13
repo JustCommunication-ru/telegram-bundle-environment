@@ -47,7 +47,7 @@ class TelegramMessage
      *
      * @ORM\Column(name="date", type="datetime", nullable=false)
      */
-    private $date;
+    //private $date;
 
     /**
      * @var \DateTime
@@ -143,19 +143,19 @@ class TelegramMessage
     /**
      * @return \DateTime
      */
-    public function getDate(): \DateTime
-    {
-        return $this->date;
-    }
+//    public function getDate(): \DateTime
+//    {
+//        return $this->date;
+//    }
 
     /**
      * @param \DateTime $date
      */
-    public function setDate(\DateTime $date): self
-    {
-        $this->date = $date;
-        return $this;
-    }
+//    public function setDate(\DateTime $date): self
+//    {
+//        $this->date = $date;
+//        return $this;
+//    }
 
     /**
      * @return \DateTime

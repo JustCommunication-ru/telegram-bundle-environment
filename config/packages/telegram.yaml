@@ -8,9 +8,7 @@ telegram:
         proxy_auth: "" #login:pass
         token: "%env(JC_TELEGRAM_TOKEN)%"
         app_url: "%env(APP_URL)%"
-        production_webhook_app_url: "" # чтобы при запуске из локала не сбивать реально работающий хук это необходимо указать сдесь
-        webhook_url_path: "/telegram/webhook"
-        user_link_url_path: "/user/telegram/link/hashplace" # hashplace заменяется на реальный хэш
+        production_webhook_app_url: "" # чтобы при запуске из локала не сбивать реально работающий хук боевой адрес необходимо указать здесь
         wrong_event_exception: true # ронять скрипты при попытке отправить несуществующий event, можно считать эту опцию strict mode
         markdown_checker: true # форматирование сообщения (умное исправление markdown и т.д. мероприятия нацеленные на 100% доставку сообщения)
         length_checker: false # обрезание по длине

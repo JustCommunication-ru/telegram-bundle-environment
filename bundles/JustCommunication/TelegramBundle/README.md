@@ -53,6 +53,17 @@ doctrine:
 ```
 php bin/console make:entity --regenerate "App\Entity\NewsTop"
 ```
+
+
+# Роуты
+```
+telegram_bundle:
+    resource: '@TelegramBundle/config/routes.yaml'
+    prefix: /telegram #здесь можно указать любой префикс, по умолчанию бандл использует пути "/telegram/..."
+    name_prefix:  # не используйте префикс имен, иначе некоторые функции рабоать не будут
+```
+
+
 Тесты запускать из бандла
 php vendor/bin/simple-phpunit tests
 
@@ -81,3 +92,10 @@ php vendor/bin/simple-phpunit tests
 ```php bin/phpunit bundles/JustCommunication/TelegramBundle/tests/RepositoryTest.php --filter testTelegramEventsExist```
 
 Замечание: При смене конфигов не забыть выполнить `php bin/console cache:clear --env test`
+
+
+# ДОРАБОТАТЬ
+@todo вынести в отдельные бандлы:
+ - CacheHelper
+ - SmsAeroHelper
+ - RedisHelper

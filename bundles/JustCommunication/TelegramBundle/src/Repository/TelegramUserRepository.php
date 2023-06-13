@@ -3,13 +3,12 @@
 namespace JustCommunication\TelegramBundle\Repository;
 
 use JustCommunication\TelegramBundle\Entity\TelegramUser;
+use JustCommunication\TelegramBundle\Service\FuncHelper;
+use JustCommunication\TelegramBundle\Trait\CacheTrait;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
-use JustCommunication\TelegramBundle\Service\FuncHelper;
-use JustCommunication\TelegramBundle\Trait\CacheTrait;
 use Psr\Log\LoggerInterface;
-use function PHPUnit\Framework\isNull;
 
 /**
  * @method TelegramUser|null find($id, $lockMode = null, $lockVersion = null)
@@ -87,6 +86,8 @@ class TelegramUserRepository extends ServiceEntityRepository
             (isset($message['from']['username']) && $message['from']['username']!='' && ($users[$message['from']['id']]['username']==''|| $users[$message['from']['id']]['username']=='-'))){
             // Небольшой хак на случай, если у нас не было инфы о пользователе (например его ручками добавили)
             $user = $this->updateUser($message['from']);
+        }else{
+            $user = $users[$message['from']['id']];
         }
         return $user;
     }
@@ -110,7 +111,9 @@ class TelegramUserRepository extends ServiceEntityRepository
                     ->setFirstName($arr['first_name'] ?? '-')
                     ->setUsername($arr['username'] ?? '-')
                     ->setLanguageCode($arr['language_code'] ?? '')
-                    ->setPhone($arr['phone'] ?? '');
+                    ->setPhone($arr['phone'] ?? '')
+                    ->setSuperuser(false)
+                ;
                 $this->em->persist($user);
                 $this->em->flush();
             }
@@ -216,5 +219,40 @@ class TelegramUserRepository extends ServiceEntityRepository
         }
         $this->cacheHelper->getCache()->delete(self::CACHE_NAME);
         return $user;
+    }
+
+
+    public function findProjectUserByPhone($tel){
+
+        $row = $this->em->createQuery('
+            SELECT u FROM App\Entity\User u
+            WHERE u.phone=:phone
+            ')->setParameter('phone', $tel)
+            ->getOneOrNullResult();
+        return $row;
+    }
+
+    /**
+     * Специально для jc:telegram --init
+     * @return array|false
+     * @throws \Doctrine\DBAL\Exception
+     */
+    public function findProjectUserBySuperuser(){
+        //
+        $tableName = $this->em->getClassMetadata('App\Entity\User')->getTableName();
+        // createQuery ругается на JSON_CONTAINS, поэтому на чистом sql
+        $statement = $this->em->getConnection()->prepare('SELECT *  FROM '.$tableName.' WHERE JSON_CONTAINS(roles,\'"ROLE_SUPERUSER"\',"$")=1 ORDER BY id ASC LIMIT 1');
+        $result = $statement->executeQuery();
+        $row = $result->fetchAssociative();
+
+        return $row;
+    }
+
+    /**
+     * Имя таблицы с которой работает репозиторий
+     * @return string
+     */
+    public function getTableName(){
+        return $this->getClassMetadata()->getTableName();
     }
 }

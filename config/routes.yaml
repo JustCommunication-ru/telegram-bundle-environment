@@ -6,5 +6,5 @@ controllers:
 
 telegram_bundle:
     resource: '@TelegramBundle/config/routes.yaml'
-    prefix: /telegram
-    name_prefix: tel
+    prefix: /telegram #здесь можно указать любой префикс, по умолчанию бандл использует пути "/telegram/..."
+    name_prefix:  # не используйте префикс имен, иначе некоторые функции рабоать не будут

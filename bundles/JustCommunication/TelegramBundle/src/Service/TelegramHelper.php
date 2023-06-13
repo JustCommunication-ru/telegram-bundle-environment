@@ -10,6 +10,7 @@ use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 
 /*
@@ -45,11 +46,15 @@ class TelegramHelper
      */
     public $debug_callback = null;
 
+    private UrlGeneratorInterface $router;
+
     public function __construct(ParameterBagInterface $params,LoggerInterface $logger,
                                 TelegramEventRepository $telegramEventRepository,
                                 TelegramSaveRepository $telegramSaveRepository,
                                 TelegramUserRepository $telegramUserRepository,
                                 TelegramUserEventRepository $telegramUserEventRepository,
+                                TelegramMessageRepository $telegramMessageRepository,
+                                UrlGeneratorInterface $router
     )
     {
         $this->config = $params->get("justcommunication.telegram.config");
@@ -63,6 +68,8 @@ class TelegramHelper
         $this->telegramSaveRepository = $telegramSaveRepository;
         $this->telegramUserRepository = $telegramUserRepository;
         $this->telegramUserEventRepository = $telegramUserEventRepository;
+        $this->telegramMessageRepository = $telegramMessageRepository;
+        $this->router = $router;
     }
 
     /**
@@ -88,14 +95,16 @@ class TelegramHelper
     }
 
     /**
+     * Возвращает ссылку на боевой вебхук, даже из dev, по крайней мере на это расчитан
      * Генерация ссылки для вебхука со встроенным хаком для локала, чтобы все проверки проходили корректно и ничего не нарушить на боевом
      * @return string
      */
     public function getWebhookUrl(){
+        $webhook_url_path = $this->router->generate('jc_telegram_webhook');
         return ($_ENV['APP_ENV']=='dev'
                         ?$this->config['production_webhook_app_url']
                         :$this->config['app_url'])
-            .$this->config['webhook_url_path'].'?token='.$this->config['token'];
+            .$webhook_url_path.'?token='.$this->config['token'];
     }
 
 
@@ -612,6 +621,14 @@ dd([$origin_str, array_map(function($item) {
         return $this->telegramUserRepository->getUsers($force);
     }
 
+    public function findProjectUserByPhone($phone){
+        return $this->telegramUserRepository->findProjectUserByPhone($phone);
+    }
+
+    public function findProjectUserBySuperuser(){
+        return $this->telegramUserRepository->findProjectUserBySuperuser();
+    }
+
     public function getUserEvent($user_chat_id, $event_name){
         return $this->telegramUserEventRepository->getUserEvent($user_chat_id, $event_name);
     }
@@ -622,6 +639,10 @@ dd([$origin_str, array_map(function($item) {
 
     public function setActive($user_chat_id, $event_name, $active){
         return $this->telegramUserEventRepository->setActive($user_chat_id, $event_name, $active);
+    }
+
+    public function newUserEvent($user_chat_id, $event_name){
+        return $this->telegramUserEventRepository->newUserEvent($user_chat_id, $event_name);
     }
 
     public function saveMessage($message, $update_id){
