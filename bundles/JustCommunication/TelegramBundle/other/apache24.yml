@@ -1,0 +1,152 @@
+vhost: |
+  <VirtualHost __DEFAULT_VHOST__:__PORT__>
+      ServerName __VHOST_NAME__
+      Protocols  __HTTP_PROTO__
+
+      CustomLog  "__ACCESS_LOG__" combined
+      ErrorLog   "__ERROR_LOG__"
+
+  __REDIRECT__
+  __SSL__
+  __VHOST_DOCROOT__
+  __VHOST_RPROXY__
+  __PHP_FPM__
+  __ALIASES__
+  __DENIES__
+  __SERVER_STATUS__
+  __CUSTOM__
+  </VirtualHost>
+
+
+vhost_type:
+  docroot: |
+    # Define the vhost to serve files
+    DocumentRoot "/shared/httpd/telegram/public"
+    <Directory "/shared/httpd/telegram/public">
+        DirectoryIndex __INDEX__
+
+        AllowOverride All
+        Options All
+
+        RewriteEngine on
+        RewriteBase /
+
+        Order allow,deny
+        Allow from all
+        Require all granted
+    </Directory>
+
+  rproxy: |
+    # ProxyRequests:     Disable "Forward Proxy"
+    # ProxyPreserveHost: Pass "Host" header to remote
+    # ProxyAddHeaders:   Add "X-Forward-*" headers
+    # ProxyVia:          Add "Via" header
+    ProxyRequests     Off
+    ProxyPreserveHost On
+    ProxyAddHeaders   On
+    ProxyVia          On
+    <Location __LOCATION__>
+        # Reverse Proxy
+        ProxyPass         __PROXY_PROTO__://__PROXY_ADDR__:__PROXY_PORT__/ retry=0
+        ProxyPassReverse  __PROXY_PROTO__://__PROXY_ADDR__:__PROXY_PORT__/
+    </Location>
+
+  rproxy_ws: |
+    # ProxyRequests:     Disable "Forward Proxy"
+    # ProxyPreserveHost: Pass "Host" header to remote
+    # ProxyAddHeaders:   Add "X-Forward-*" headers
+    # ProxyVia:          Add "Via" header
+    ProxyRequests     Off
+    ProxyPreserveHost On
+    ProxyAddHeaders   On
+    ProxyVia          On
+    <Location __LOCATION__>
+        # Websocket Rewrite Settings
+        RewriteEngine On
+        RewriteCond %{HTTP:Connection} Upgrade   [NC]
+        RewriteCond %{HTTP:Upgrade}    websocket [NC]
+        RewriteRule ^/?(.*)$ __WS_PROTO__://__PROXY_ADDR__:__PROXY_PORT__/$1 [P,L]
+        # Reverse Proxy
+        ProxyPass         __PROXY_PROTO__://__PROXY_ADDR__:__PROXY_PORT__/ retry=0
+        ProxyPassReverse  __PROXY_PROTO__://__PROXY_ADDR__:__PROXY_PORT__/
+    </Location>
+
+
+
+features:
+
+  # SSL Configuration
+  ssl: |
+    SSLEngine on
+    SSLCertificateFile    "__SSL_PATH_CRT__"
+    SSLCertificateKeyFile "__SSL_PATH_KEY__"
+    SSLProtocol           __SSL_PROTOCOLS__
+    SSLHonorCipherOrder   __SSL_HONOR_CIPHER_ORDER__
+    SSLCipherSuite        __SSL_CIPHERS__
+
+  # Redirect to SSL directive
+  redirect: |
+    RedirectMatch (.*) https://__VHOST_NAME__:__SSL_PORT__$1
+
+  # PHP-FPM will not be applied to a reverse proxy!
+  php_fpm: |
+    # In case for PHP-FPM 5.2 compatibility use 'GENERIC' instead of 'FPM'
+    # https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html#proxyfcgibackendtype
+    ProxyFCGIBackendType FPM
+
+    # PHP-FPM Definition
+    <FilesMatch \.php$>
+        Require all granted
+        SetHandler proxy:fcgi://__PHP_ADDR__:__PHP_PORT__
+    </FilesMatch>
+
+    <Proxy "fcgi://__PHP_ADDR__:__PHP_PORT__/">
+        ProxySet timeout=__PHP_TIMEOUT__
+        ProxySet connectiontimeout=__PHP_TIMEOUT__
+    </Proxy>
+
+    RewriteCond %{REQUEST_FILENAME} \.php$
+    RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_URI} !-f
+    RewriteRule (.*) - [H=text/html]
+
+  alias: |
+    # Alias Definition
+    Alias "__ALIAS__" "__PATH____ALIAS__"
+    <Location "__ALIAS__">
+        ProxyPass !
+    __XDOMAIN_REQ__
+    </Location>
+    <Directory "__PATH____ALIAS__">
+        Order allow,deny
+        Allow from all
+        Require all granted
+    </Directory>
+
+  deny: |
+    # Deny Definition
+    <LocationMatch "__REGEX__">
+        Order allow,deny
+        Deny from all
+    </LocationMatch>
+
+  server_status: |
+    # Status Page
+    <Location __REGEX__>
+        SetHandler server-status
+        Order allow,deny
+        Allow from all
+        Require all granted
+    </Location>
+
+  xdomain_request: |
+    # Allow cross domain request from these hosts
+    SetEnvIf Origin "__REGEX__" AccessControlAllowOrigin=$0
+    Header always set Access-Control-Allow-Origin   %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
+    Header always set Access-Control-Allow-Methods  "HEAD, GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers  "Accept, Authorization, Content-Security-Policy, Content-Type, Location, Origin, X-Requested-With"
+    Header always set Access-Control-Expose-Headers "Content-Security-Policy, Location"
+    Header always set Access-Control-Max-Age "0"
+    # Added a rewrite to respond with a 200 SUCCESS on every OPTIONS request.
+    RewriteEngine On
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]

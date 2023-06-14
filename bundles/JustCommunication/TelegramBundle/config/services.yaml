@@ -20,4 +20,10 @@ services:
     #    arguments:
     #        $my_param: '%justcommunication.telegram.pumpum%'
 
-    
+
+    jc.service.telegramwebhook:
+        class: JustCommunication\TelegramBundle\Service\TelegramWebhook
+
+    JustCommunication\TelegramBundle\Controller\TelegramController:
+        arguments:
+            $webhook: '@jc.service.telegramwebhook'

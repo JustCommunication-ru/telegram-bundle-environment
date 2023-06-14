@@ -13,15 +13,14 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 
-/*
+/**
+ * Сервис для работы с телеграм-уведомлениями, ботом и всем что с этим связано.
+ *
  * Если в этом блоке встречаются символы из перечисленных: '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'  — их нужно экранировать, добавлять перед ними обратный слэш \
  * some text /somepath Если перед слешем стоит пробел, то интерпритируются как команда, как исправить? хз используем два слеша или слитно при чем иногда слитно через пробел работает в других случаях нет
  * dgsdfg *on*
- */
-/**
  * https://core.telegram.org/bots/api - листать вниз до Available methods
  * emoji(Bytes (UTF-8)): https://apps.timwhitlock.info/emoji/tables/unicode
- *
  */
 class TelegramHelper
 {
@@ -57,19 +56,25 @@ class TelegramHelper
                                 UrlGeneratorInterface $router
     )
     {
-        $this->config = $params->get("justcommunication.telegram.config");
-        $this->events = $params->get("justcommunication.telegram.events");
-        if (!$this->config['token']){
-            throw new \Exception('Telegram token const not set in .env.local [JC_TELEGRAM_TOKEN]', 1);
-        }
-        $this->logger = $logger;
+        try {
+            $this->config = $params->get("justcommunication.telegram.config");
+            $this->events = $params->get("justcommunication.telegram.events");
 
-        $this->telegramEventRepository = $telegramEventRepository;
-        $this->telegramSaveRepository = $telegramSaveRepository;
-        $this->telegramUserRepository = $telegramUserRepository;
-        $this->telegramUserEventRepository = $telegramUserEventRepository;
-        $this->telegramMessageRepository = $telegramMessageRepository;
-        $this->router = $router;
+            if (!$this->config['token']){
+                throw new \Exception('Telegram token const not set in .env.local [JC_TELEGRAM_TOKEN]', 1);
+            }
+            $this->logger = $logger;
+
+            $this->telegramEventRepository = $telegramEventRepository;
+            $this->telegramSaveRepository = $telegramSaveRepository;
+            $this->telegramUserRepository = $telegramUserRepository;
+            $this->telegramUserEventRepository = $telegramUserEventRepository;
+            $this->telegramMessageRepository = $telegramMessageRepository;
+            $this->router = $router;
+        }catch (\Exception $exception){
+            throw new \Exception("Install justcommunication.telegram.config");
+        }
+
     }
 
     /**

@@ -4,7 +4,6 @@ namespace JustCommunication\TelegramBundle\Service;
 
 /**
  * Собственно хелпер только для того, чтобы было единое место инициализации и использование конфигов.
- * А так, конечно, нафиг не нужен
  */
 use Predis\Client;
 use Psr\Cache\InvalidArgumentException;

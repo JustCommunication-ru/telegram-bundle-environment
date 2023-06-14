@@ -283,7 +283,14 @@ class TelegramCommand extends Command
                 $request = Request::create($webhook_url_path, 'POST', array(), array(), array(), array(), json_encode($paramaters));
                 $response = $this->kernel->handle($request, HttpKernelInterface::SUB_REQUEST);
 
-                die($response->getContent());
+                $res = $response->getContent();
+                $res_arr = json_decode($res, true);
+                if ($res_arr!==null) {
+                    var_dump($res_arr);
+                }else{
+                    echo $res;
+                }
+                die("\r\n"."\r\n");
             }
 
         }else{

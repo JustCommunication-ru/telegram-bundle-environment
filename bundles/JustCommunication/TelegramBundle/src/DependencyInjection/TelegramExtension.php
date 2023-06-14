@@ -26,14 +26,18 @@ class TelegramExtension extends Extension
         //var_dump($container);
 
         // Превращаем конфиги из packages/telegram.yaml в параметры, которые можем вытащить через ParameterBagInterface
-        $container->setParameter(
-            'justcommunication.telegram.config',
-            $config['config']
-        );
-        $container->setParameter(
-            'justcommunication.telegram.events',
-            $config['events']
-        );
+        if (isset($config['config'])) {
+            $container->setParameter(
+                'justcommunication.telegram.config',
+                $config['config']
+            );
+        }
+        if (isset($config['events'])) {
+            $container->setParameter(
+                'justcommunication.telegram.events',
+                $config['events']
+            );
+        }
 
 
 

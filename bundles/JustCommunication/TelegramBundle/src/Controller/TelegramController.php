@@ -4,7 +4,7 @@ namespace JustCommunication\TelegramBundle\Controller;
 
 
 use JustCommunication\TelegramBundle\Service\TelegramHelper;
-use JustCommunication\TelegramBundle\Service\TelegramWebhook;
+//use JustCommunication\TelegramBundle\Service\TelegramWebhook;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,10 +20,15 @@ class TelegramController extends AbstractController
 {
     //private $curl;
 
-    public function __construct(){
+    private $webhook;
+
+    // вместо autowire TelegramWebhook $webhook используется явное подключение вебхука через конфиги
+    // для того чтобы можно было переопределить повидение телеграм бота
+    public function __construct($webhook){
         //$this->curl = $client;
         $this->response = new Response();
         $this->response->headers->set('Content-Type','application/json');
+        $this->webhook = $webhook;
 
     }
 
@@ -31,13 +36,14 @@ class TelegramController extends AbstractController
      * Тот самый WebHook (точка доступа) за которую будет дергать Телеграм когда надо будет реагировать на пользователя в чате
      * @param TelegramHelper $telegram
      * @param Request $request
-     * @param TelegramWebhook $webhook
+     * @param $webhook
      * @return JsonResponse
      */
     #[Route('/telegram/webhook', name: 'jc_telegram_webhook')]
     //public function telegram_webhook(TelegramHelper $telegram, Request $request, ParameterBagInterface $services_params){
-    public function telegram_webhook(TelegramHelper $telegram, Request $request, TelegramWebhook $webhook){
+    public function telegram_webhook(TelegramHelper $telegram, Request $request){
 
+        $webhook = $this->webhook;
 
         // Аутентификация у нас по токену в get параметре
         $token = $_GET['token'] ?? '';
@@ -221,7 +227,7 @@ class TelegramController extends AbstractController
                                 ], 'editMessageText');
                                 $ans = false;
                             } else {
-                                if (method_exists(TelegramWebhook::class, $command . $user['role'] . 'Command')) {
+                                if (method_exists($webhook::class, $command . $user['role'] . 'Command')) {
                                     $method = $command . $user['role'] . 'Command';
                                     $ans = $webhook->$method($params);
                                 } elseif ($_act == 'add' && str_starts_with($command, $_act) && array_key_exists($_subscription, $list)) {

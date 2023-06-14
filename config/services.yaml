@@ -34,12 +34,16 @@ services:
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
-    App\:
-        resource: '../src/'
-        exclude:
-            - '../src/DependencyInjection/'
-            - '../src/Entity/'
-            - '../src/Kernel.php'
+    #JustCommunication\TelegramBundle\Service\TelegramWebhook:
+    #    class: App\Service\TelegramWebhook
+
+    app.service.mytelegramwebhook:
+        class: App\Service\MyTelegramWebhook
+
+    JustCommunication\TelegramBundle\Controller\TelegramController:
+        arguments:
+            $webhook: '@app.service.mytelegramwebhook'
+
 
 
 

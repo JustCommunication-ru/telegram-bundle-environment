@@ -1,101 +1,142 @@
-symfony new telegram --version="6.3.*@dev"
-composer require symfony/orm-pack
-composer require doctrine/annotations
-composer require symfony/maker-bundle --dev
+# Telegram Bundle
 
-создание composer.json
-*Автолоад переписать на "JustCommunication\\Telegram\\": "src/", Изменить в Kernel, bin/console, src/index.php
+# Установка 
+`composer require justcommunication/telegram-bundle`
+
+# Требования
+Пакет встраивается в полноценный Symfony проект и требует ряд общих механизмов:
+- настроенное подключение к базе данных
+- наличие пользователей в системе и сущность `App\Entity\User`
+- стандартный security и сущность `\App\Entity\User` у которой есть test/json поле `roles`.
+
+Поддерживает роли ROLE_ADMINISTRATOR, ROLE_SUPERUSER, ROLE_MANAGER и все остальные. При этом конвертирует их во внутренние Superuser, Manager и User соответственно. В следующий версиях работу с ролями надо будет расширить.
 
 
+# Подключение
+Настроить .env.local своего проекта
+APP_NAME="MyProjectName" # название проекта, используется в сообщениях
+APP_URL="https://telegram.loc" # ссылка на проект
+
+JC_TELEGRAM_ADMIN_CHAT_ID=789456123 # ваш личный номер в телеграмме
+JC_TELEGRAM_BOT_NAME="MY_PROJECT_BOT" # название бота в произвольной фореме (может не совпадать с официально зарегистрированным), но именно это название будет в сообщениях
+JC_TELEGRAM_TOKEN="NUMBERS:MANYSYMBOLS" # Токен выданный телеграммом
+JC_TELEGRAM_WEBHOOK_APP_URL_FOR_DEV="https://service.espvbprr.jc9.ru" # для инициализации телеграма в локале, используется только в DEV среде
 
 
-#ЗАПУСК ПРОЕКТА
+## Регистрация своего бота
+Информация не относится к бандлу, но пусть будет подсказка для тех кто первый раз с этим сталкивается (актуально на 2023):
 
-Запустить `composer update`
 
-Настроить .env.local
-1) подключение к бд `DATABASE_URL`
-2) Настройки подключения к телеграму `JC_TELEGRAM__*` Как создать бота отдельная тема.
+Если надо завести бота, то идем к ботфазеру (в поиске находим `@BotFather`) и выполняем команду `/newbot`.
 
+На самом деле там есть подсказки что к чему и подробный `/help`. Так что главное понять суть, дальше всегда можно сориентироваться.
+
+При создании бота сначала спросят имя (это человекоприятное имя в вольной форме), а потом username, вот там уже есть правило, чтобы заканчивалось на Bot или _bot.
+
+Для начала стоит зайти в поиск телеграма поискать варианты нужного названия, возможно уже всё занято (все контакты который начинаются с @ это боты)
+
+После успешной регистрации будет выдан токен, в общем-то его можно у ботфазера спросить позднее, так что если не сохранить сразу, то не страшно.
+
+Настройка бота:
+- BotPic - аватар для бота/setuserpic.
+- About -  это то что будет написано если перейти по прямой сслыке https://t.me/NameOfBot
+- Description - это то, что будет написано когда первый раз открыл бота.
+- DescriptionPicture это изображение которое будет при первом открытии, требует 640x360.
+
+Что нужно помнить, для полноценной работы с ботом необходимо разместить в сети свой обработчик и зарегистрировать по токену ссылку на которую будут приходить все сообщения отправленные боту.
+
+# Настройка и запуск
 
 Если база данных в проекте отсутствует, то выполнить (будет создана telegram):
 
 ```php bin/console doctrine:database:create```
 
+Если бд в проекте уже есть, то запускать не нужно.
+Далее выполнить миграции (к миграциям проекта добавятся миграции бандла, которые создадут нужные таблицы)
+
 ```php bin/console doctrine:migration:migrate```
 
-Установка config/packages/telegram.yaml
+Для подключения проекта нужно создать файл конфигурации бандла в хост проекте `config/packages/telegram.yaml`, это можно сделать вручную, а можно выполнить команду:
+
 ```php bin/console jc:telegram:install```
 
+Если что-то пойдет не так, то актуальную версию файла конфигурации можно найти в самом бандле `@telegram-bundle-folder/config/packages/telegram.yaml`
 
-Нужно переписать InstalCommand
-
-
-config/packages/doctrine.yaml
-
-php bin/console make:migration
-
-Настроить в `/.devilbox/apache24.yml` правильный DocumentRoot
-
-Добавить в родительский `config/packages/doctrine.yaml`
-```
-doctrine:
-    orm:        
-        mappings:            
-            JustCommunication\TelegramBundle:
-                is_bundle: false
-                dir: '%kernel.project_dir%/bundles/JustCommunication/TelegramBundle/src/Entity'
-                prefix: 'JustCommunication\TelegramBundle\Entity'
-                alias: JustCommunication\TelegramBundle
-```
-И изменения в бандле будут автоматом подтягиваться, супер!
-есть еще, но не пробовал:
-```
-php bin/console make:entity --regenerate "App\Entity\NewsTop"
-```
-
-
-# Роуты
+Кроме этого потребуется "пробросить роуты" из бандла в хост проект, для этого либо в `config/routes.yaml` добавить, либо создать отдельный файл `config/routes/telegram.yaml` 
 ```
 telegram_bundle:
     resource: '@TelegramBundle/config/routes.yaml'
-    prefix: /telegram #здесь можно указать любой префикс, по умолчанию бандл использует пути "/telegram/..."
-    name_prefix:  # не используйте префикс имен, иначе некоторые функции рабоать не будут
+    prefix: /telegram #здесь можно указать любой префикс, по умолчанию бандл использует пути "/telegram/..." поэтому если пути не пересекаются с путями проекта имеет смысл оставить значение пустым
+    name_prefix:  # не используйте префикс имен, иначе некоторые функции работать не будут
+    # Все роуты бандла начинаются с "jc_telegram_"
 ```
 
 
-Тесты запускать из бандла
-php vendor/bin/simple-phpunit tests
 
 
-Бандл использует стандартный security и расчитывает на то что в хост проекте есть \App\Entity\User у которого есть test/json поле roles.
-Поддерживает роли ROLE_ADMINISTRATOR, ROLE_SUPERUSER, ROLE_MANAGER и все остальные. При этом конвертирует их во внутренние Superuser, Manager и User соответственно. Вопрос зачем такие ограничения? надо просто пробрасывать роли как есть наверно
+## Отладка вебхука
+С телеграм-ботом можно общаться только в боевом режиме, так как сервис telegram все зарпосы будет отправлять на реально действующий зарегистрированный адрес. Для отладки реакции вебхука в локале можно использовать command
+
+```php bin/console jc:telegram --webhook "/somecomand"```
 
 
+## Переопределение поведения телеграм бота
+Реакция телеграм бота определяется сервисом вебхука который вызывается в контроллере. 
+Вместо autowire JustCommunication\TelegramBundle\TelegramWebhook $webhook в контоллере используется явное подключение вебхука через конфиги в services.yaml
+```
+services:    
+    # Регистрируем id сервиса
+    jc.service.telegramwebhook:
+        class: JustCommunication\TelegramBundle\Service\TelegramWebhook
 
-#Тесты
+    # явно определяем значение аргумента $webhook в __construct() контроллера
+    JustCommunication\TelegramBundle\Controller\TelegramController:
+        arguments:
+            $webhook: '@jc.service.telegramwebhook'
+```
 
-Тесты находятся внутри бандла, но расчитаны на запуск из хост-проекта, поэтому все настройки окружения для тестирования необходимо проделать самому.
-Тесты написаны с таким расчетом, что будут запускаться на боевой базе, поэтому требовать наличия данных, изменяют эти данные, но возвращают назад.
+Соответственно, для того чтобы использовать свой код необходимо:
 
-Запуск: 
+- скопировать TelegramWebhook.php из бандла в свой хост проект (например в App\Service\)
+- переименовать его (например в MyTelegramWebhook.php) изменив название класса
+- унаследовать от вебхкука из пакета `extends TelegramWebhook` 
+- оставить только те мотоды, которые необходимо переопределить
+- добавить свои обработчики команд
+- в хост настройках зарегистрировать свой сервис и подключить к контроллеру пакета:
 
-```php bin/phpunit bundles/JustCommunication/TelegramBundle/tests```
+```
+services:
+    app.service.mytelegramwebhook:
+        class: App\Service\MyTelegramWebhook
 
-или 
+    JustCommunication\TelegramBundle\Controller\TelegramController:
+        arguments:
+            $webhook: '@app.service.mytelegramwebhook'
+```
 
-```php bin/phpunit vendor/justcommunication/telegram-bundle/tests```
-в зависимости от подключения бандла.
+### Обработчики телеграм команд
+Класс TelegramWebhook содержит набор функций вида `commandNameSuperuserCommand`
 
-Запуск одного теста:
+Где commandName не зависящее от регистра (camel case для порядку) имя команды которое будет обработано, например `/commandname`
+`Superuser` это роль пользователя на которого отзовется обработчик
+`Command` зарезервированный суффикс обработчиков
 
-```php bin/phpunit bundles/JustCommunication/TelegramBundle/tests/RepositoryTest.php --filter testTelegramEventsExist```
+### Параметры команд
+После имени команды может быть текст который будет обработан как набор неименованных входных параметров разделенных пробелами, например `/makebutterbrod bread butter cheese`
+```
+public function makebutterbrodUserCommand($params = []){
+    $base = $param[0]; // bread
+    $layer = $param[1]; // butter
+    $filling =  $param[2]; // cheese
+}
+```
 
-Замечание: При смене конфигов не забыть выполнить `php bin/console cache:clear --env test`
 
 
 # ДОРАБОТАТЬ
 @todo вынести в отдельные бандлы:
- - CacheHelper
- - SmsAeroHelper
- - RedisHelper
+- CacheHelper
+- SmsAeroHelper
+- RedisHelper
+
+

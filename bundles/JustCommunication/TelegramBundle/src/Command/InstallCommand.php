@@ -50,6 +50,8 @@ class InstallCommand extends Command
                         . DIRECTORY_SEPARATOR . 'telegram.yaml'
         ;
 
+
+
         if ($this->filesystem->exists($bundleConfigFilename)) {
             $output->writeln('Config file already exists');
 
@@ -57,11 +59,13 @@ class InstallCommand extends Command
         }
 
         // Конечно лучше скопировать из готового файла
+        $content= file_get_contents(dirname(dirname(__DIR__)).DIRECTORY_SEPARATOR.'config'.DIRECTORY_SEPARATOR.'packages'.DIRECTORY_SEPARATOR.'telegram.yaml');
+
+
         $config = <<<YAML
-telegram:
-    my_param: "param-pam-pam"
+'.$content.'
 YAML;
-        $this->filesystem->appendToFile($bundleConfigFilename, $config);
+        $this->filesystem->appendToFile($bundleConfigFilename, $content);
 
         $output->writeln('Config created: "config/packages/telegram.yaml"');
 
