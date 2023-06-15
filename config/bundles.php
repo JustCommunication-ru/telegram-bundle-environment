@@ -8,4 +8,6 @@ return [
     Symfony\Bundle\TwigBundle\TwigBundle::class => ['all' => true],
     Symfony\Bundle\SecurityBundle\SecurityBundle::class => ['all' => true],
     JustCommunication\TelegramBundle\TelegramBundle::class => ['all' => true],
+    JustCommunication\CacheBundle\CacheBundle::class => ['all' => true],
+    JustCommunication\FuncBundle\FuncBundle::class => ['all' => true],
 ];

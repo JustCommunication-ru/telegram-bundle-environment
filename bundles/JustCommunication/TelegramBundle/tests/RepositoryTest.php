@@ -2,11 +2,11 @@
 
 namespace JustCommunication\TelegramBundle\Tests\Unit;
 
+use JustCommunication\FuncBundle\Service\FuncHelper;
 use JustCommunication\TelegramBundle\Entity\TelegramUserEvent;
 use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramUserEventRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
-use JustCommunication\TelegramBundle\Service\FuncHelper;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 

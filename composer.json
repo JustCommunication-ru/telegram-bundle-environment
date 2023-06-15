@@ -14,6 +14,8 @@
         "doctrine/doctrine-bundle": "^2.9",
         "doctrine/doctrine-migrations-bundle": "^3.2",
         "doctrine/orm": "^2.15",
+        "justcommunication/cache-bundle": "^0.0.1",
+        "justcommunication/func-bundle": "^0.0.1",
         "justcommunication/telegram-bundle": "^0.0.1",
         "predis/predis": "^2.1",
         "symfony/console": "6.3.*",
@@ -30,6 +32,14 @@
         {
             "type": "path",
             "url":  "./bundles/JustCommunication/TelegramBundle"
+        },
+        {
+            "type": "path",
+            "url":  "./bundles/JustCommunication/CacheBundle"
+        },
+        {
+            "type": "path",
+            "url":  "./bundles/JustCommunication/FuncBundle"
         }
     ],
     "config": {

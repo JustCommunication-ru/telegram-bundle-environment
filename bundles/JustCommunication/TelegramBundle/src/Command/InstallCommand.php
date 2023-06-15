@@ -5,6 +5,7 @@ namespace JustCommunication\TelegramBundle\Command;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\HttpKernel\KernelInterface;
@@ -30,7 +31,12 @@ class InstallCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $output->writeln('Installing JustCommunication/Telegram...');
+
+        $this->io = new SymfonyStyle($input, $output);
+
+        $this->io->block('Installing JustCommunication/Telegram...');
+
+        //$output->writeln('Installing JustCommunication/Telegram...');
 
         $this->initConfig($output);
 
@@ -43,31 +49,59 @@ class InstallCommand extends Command
     private function initConfig(OutputInterface $output): void
     {
         // Create default config if not exists
-        $bundleConfigFilename =
-            $this->projectDir
-                . DIRECTORY_SEPARATOR . 'config'
-                    . DIRECTORY_SEPARATOR . 'packages'
-                        . DIRECTORY_SEPARATOR . 'telegram.yaml'
+        $bundleConfigFilenamePath =
+            DIRECTORY_SEPARATOR . 'config'
+                . DIRECTORY_SEPARATOR . 'packages'
+                    . DIRECTORY_SEPARATOR . 'telegram.yaml'
+        ;
+        $bundleRoutesFilenamePath =
+            DIRECTORY_SEPARATOR . 'config'
+                . DIRECTORY_SEPARATOR . 'routes'
+                    . DIRECTORY_SEPARATOR . 'telegram.yaml'
         ;
 
 
 
-        if ($this->filesystem->exists($bundleConfigFilename)) {
-            $output->writeln('Config file already exists');
+        $usefull = false;
 
-            return;
+        if ($this->filesystem->exists($this->projectDir.$bundleConfigFilenamePath)) {
+            $this->io->warning('Bundle config file already exists');
+        }else{
+            $usefull=true;
+            // Конечно лучше скопировать из готового файла
+            $config_content= file_get_contents(dirname(dirname(__DIR__)).DIRECTORY_SEPARATOR.$bundleConfigFilenamePath);
+            $this->filesystem->appendToFile($this->projectDir.$bundleConfigFilenamePath, $config_content);
+            $this->io->success('Bundle config created: "'.$bundleConfigFilenamePath.'"');
         }
+        //$output->writeln('');
+        //$this->io->block('');
 
-        // Конечно лучше скопировать из готового файла
-        $content= file_get_contents(dirname(dirname(__DIR__)).DIRECTORY_SEPARATOR.'config'.DIRECTORY_SEPARATOR.'packages'.DIRECTORY_SEPARATOR.'telegram.yaml');
+        if ($this->filesystem->exists($this->projectDir.$bundleRoutesFilenamePath)) {
+            $this->io->warning('Bundle routes file already exists');
+        }else{
+            $usefull=true;
+            // Конечно лучше скопировать из готового файла
+            $routes_content= file_get_contents(dirname(dirname(__DIR__)).DIRECTORY_SEPARATOR.$bundleRoutesFilenamePath);
+            $this->filesystem->appendToFile($this->projectDir.$bundleRoutesFilenamePath, $routes_content);
+            $this->io->success('Bundle config created: "'.$bundleRoutesFilenamePath.'"');
+        }
+        //$this->io->block('');
 
 
-        $config = <<<YAML
-'.$content.'
-YAML;
-        $this->filesystem->appendToFile($bundleConfigFilename, $content);
+//        $config = <<<YAML
+//'.$config_content.'
+//YAML;
 
-        $output->writeln('Config created: "config/packages/telegram.yaml"');
+        if ($usefull) {
+            $exec_command = 'php bin/console cache:clear';
+            $this->io->block('Running "' . $exec_command.'"');
+            $_exec_out = '';
+
+            exec($exec_command, $_exec_out);
+            $output->writeln($_exec_out);
+        }else{
+            $output->writeln(['finished','']);
+        }
 
     }
 }

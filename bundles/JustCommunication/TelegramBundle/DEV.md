@@ -52,3 +52,12 @@ php bin/console make:entity --regenerate "App\Entity\NewsTop"
 
 Можно попробовать запускать тесты изнутри, но там свои нюансы 
 php vendor/bin/simple-phpunit tests
+
+
+
+
+# ДОРАБОТАТЬ
+@todo вынести в отдельные бандлы:
+- CacheHelper
+- SmsAeroHelper
+- RedisHelper

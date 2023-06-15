@@ -2,12 +2,12 @@
 
 namespace JustCommunication\TelegramBundle\Repository;
 
+use JustCommunication\FuncBundle\Service\FuncHelper;
 use JustCommunication\TelegramBundle\Entity\TelegramEvent;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
-use JustCommunication\TelegramBundle\Service\FuncHelper;
-use JustCommunication\TelegramBundle\Trait\CacheTrait;
+use JustCommunication\CacheBundle\Trait\CacheTrait;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -22,12 +22,11 @@ class TelegramEventRepository extends ServiceEntityRepository
     private EntityManagerInterface $em;
     const CACHE_NAME = 'telegram_events';
 
-    public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em, FuncHelper $funcHelper)
+    public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em)
     {
         parent::__construct($registry, TelegramEvent::class);
         $this->logger = $logger;
         $this->em = $em;
-        $this->funcHelper = $funcHelper;
 
     }
 
@@ -35,7 +34,7 @@ class TelegramEventRepository extends ServiceEntityRepository
 
         $callback = function(){
             $rows = $this->em->createQuery('SELECT e FROM JustCommunication\TelegramBundle\Entity\TelegramEvent e')->getArrayResult();
-            return $this->funcHelper::array_foreach($rows, array('roles', 'note'), 'name');
+            return FuncHelper::array_foreach($rows, array('roles', 'note'), 'name');
         };
         return $this->cached(self::CACHE_NAME, $callback, $force);
     }

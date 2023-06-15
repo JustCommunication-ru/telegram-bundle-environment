@@ -3,6 +3,7 @@
 namespace JustCommunication\TelegramBundle\Service;
 
 use Doctrine\DBAL\Connection;
+use JustCommunication\FuncBundle\Service\FuncHelper;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
@@ -31,12 +32,11 @@ class SmsAeroHelper
     const RESULT_CODE_WRONG_PHONE_NUMBER = 3;
     const RESULT_CODE_LIMIT_OVER = 9;
 
-    //, CacheHelper $cacheHelper
+
     public function __construct(ParameterBagInterface $params, Connection $connection, RedisHelper $redisHelper, TelegramHelper $telegramHelper, LoggerInterface $logger)
     {
         $this->config = $params->get("smsaero");
         $this->db = $connection;
-        //$this->cache = $cacheHelper->getCache();
         $this->redis = $redisHelper->getClient();
         $this->telegram = $telegramHelper;
         $this->logger = $logger;

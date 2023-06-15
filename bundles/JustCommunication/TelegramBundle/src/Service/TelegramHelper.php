@@ -72,7 +72,9 @@ class TelegramHelper
             $this->telegramMessageRepository = $telegramMessageRepository;
             $this->router = $router;
         }catch (\Exception $exception){
-            throw new \Exception("Install justcommunication.telegram.config");
+            // Если запускать jc:telegram:install, то пытаются завестить другие command а они требуют хелпера, а хелпер требует конфиги. и сообщения вводят в заблуждение
+            // С другой стороны если без установки попытаться воспользоваться функционалом сыпятся непонятные ошибки из-за закоментированного ниже кода
+            //throw new \Exception("You need to set config justcommunication.telegram.config, do it manualy or run jc:telegram:install");
         }
 
     }

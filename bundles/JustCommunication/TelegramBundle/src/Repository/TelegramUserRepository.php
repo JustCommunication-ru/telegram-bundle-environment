@@ -3,8 +3,7 @@
 namespace JustCommunication\TelegramBundle\Repository;
 
 use JustCommunication\TelegramBundle\Entity\TelegramUser;
-use JustCommunication\TelegramBundle\Service\FuncHelper;
-use JustCommunication\TelegramBundle\Trait\CacheTrait;
+use JustCommunication\CacheBundle\Trait\CacheTrait;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -22,13 +21,11 @@ class TelegramUserRepository extends ServiceEntityRepository
     private EntityManagerInterface $em;
     const CACHE_NAME = 'telegram_users';
 
-    public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em, FuncHelper $funcHelper)
+    public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em)
     {
         parent::__construct($registry, TelegramUser::class);
         $this->logger = $logger;
         $this->em = $em;
-        $this->funcHelper = $funcHelper;
-
     }
 
     /**

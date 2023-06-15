@@ -1,8 +1,7 @@
 <?php
-namespace JustCommunication\TelegramBundle\Trait;
+namespace JustCommunication\CacheBundle\Trait;
 
-use JustCommunication\TelegramBundle\Service\CacheHelper;
-use Symfony\Contracts\Cache\CacheInterface;
+use JustCommunication\CacheBundle\Service\CacheHelper;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Service\Attribute\Required;
 
@@ -21,8 +20,8 @@ trait CacheTrait
         });
     }
 
-    public function cache_delete($cache_name){
-        $this->cacheHelper;
-    }
+    //public function cache_delete($cache_name){
+    //    $this->cacheHelper
+    //}
 
 }

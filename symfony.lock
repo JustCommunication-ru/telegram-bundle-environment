@@ -35,6 +35,12 @@
             "migrations/.gitignore"
         ]
     },
+    "justcommunication/cache-bundle": {
+        "version": "0.0.1"
+    },
+    "justcommunication/func-bundle": {
+        "version": "0.0.1"
+    },
     "justcommunication/telegram-bundle": {
         "version": "0.0.1"
     },

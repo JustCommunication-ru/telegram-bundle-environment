@@ -5,7 +5,7 @@ namespace JustCommunication\TelegramBundle\Controller;
 use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
 use JustCommunication\TelegramBundle\Service\TelegramHelper;
-use JustCommunication\TelegramBundle\Trait\CacheTrait;
+use JustCommunication\CacheBundle\Trait\CacheTrait;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;

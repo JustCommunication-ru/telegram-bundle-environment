@@ -1,0 +1,12 @@
+parameters:
+    memcache:
+        host: 127.0.0.1
+        port: 11211
+        namespace: ''
+        lifetime: 86400
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+    JustCommunication\CacheBundle\:
+        resource: '../src/'

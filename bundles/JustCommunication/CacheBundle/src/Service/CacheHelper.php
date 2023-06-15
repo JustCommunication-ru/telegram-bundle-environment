@@ -1,6 +1,6 @@
 <?php
 
-namespace JustCommunication\TelegramBundle\Service;
+namespace JustCommunication\CacheBundle\Service;
 
 use Psr\Cache\InvalidArgumentException;
 use Symfony\Component\Cache\Adapter\MemcachedAdapter;

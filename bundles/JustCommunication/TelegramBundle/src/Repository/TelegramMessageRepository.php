@@ -6,8 +6,7 @@ use JustCommunication\TelegramBundle\Entity\TelegramMessage;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
-use JustCommunication\TelegramBundle\Service\FuncHelper;
-use JustCommunication\TelegramBundle\Trait\CacheTrait;
+use JustCommunication\CacheBundle\Trait\CacheTrait;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -21,13 +20,11 @@ class TelegramMessageRepository extends ServiceEntityRepository
     use CacheTrait;
     private EntityManagerInterface $em;
 
-    public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em, FuncHelper $funcHelper)
+    public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em)
     {
         parent::__construct($registry, TelegramMessage::class);
         $this->logger = $logger;
         $this->em = $em;
-        $this->funcHelper = $funcHelper;
-
     }
 
     /**

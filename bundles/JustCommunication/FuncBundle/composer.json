@@ -1,0 +1,26 @@
+{
+    "name": "justcommunication/func-bundle",
+    "description": "Func bundle",
+    "version": "0.0.1",
+    "type": "symfony-bundle",
+    "keywords": ["functions","array","date","string"],
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.1"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "JustCommunication\\FuncBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JustCommunication\\FuncBundle\\Tests\\": "tests/"
+        }
+    }
+}

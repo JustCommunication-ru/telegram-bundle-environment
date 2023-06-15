@@ -2,9 +2,7 @@
 
 namespace JustCommunication\TelegramBundle\Controller;
 
-
 use JustCommunication\TelegramBundle\Service\TelegramHelper;
-//use JustCommunication\TelegramBundle\Service\TelegramWebhook;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,18 +16,14 @@ use Symfony\Component\Routing\Annotation\Route;
  */
 class TelegramController extends AbstractController
 {
-    //private $curl;
-
     private $webhook;
 
     // вместо autowire TelegramWebhook $webhook используется явное подключение вебхука через конфиги
     // для того чтобы можно было переопределить повидение телеграм бота
     public function __construct($webhook){
-        //$this->curl = $client;
         $this->response = new Response();
         $this->response->headers->set('Content-Type','application/json');
         $this->webhook = $webhook;
-
     }
 
     /**
@@ -92,7 +86,7 @@ class TelegramController extends AbstractController
                         }
                         // Если нам прислали контакт, то притворяемся что выполняем команду /contact
                     }
-                } else
+                } else {
                     // При нажатии на кнопку мы получаем update_id и callback_query в котором содержимое-аналог message
                     // и плюс полный объект message в котором был кнопка
                     if (isset($arr['callback_query'])) {
@@ -103,7 +97,7 @@ class TelegramController extends AbstractController
                         $mess = null;
                         $user_chat_id = null;
                     }
-
+                }
                 // mess это текст, а message это уже объект, а не уй собачий
                 $message = isset($arr['message']) ? $arr['message'] : (isset($arr['callback_query']['message']) ? $arr['callback_query']['message'] : false);
 

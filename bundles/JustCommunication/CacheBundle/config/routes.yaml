@@ -1,0 +1,5 @@
+telegram_routes:
+    resource:
+        path: ../src/Controller/
+        namespace: JustCommunication\TelegramBundle\Controller
+    type: attribute

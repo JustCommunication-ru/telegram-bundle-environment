@@ -2,7 +2,7 @@
 
 namespace JustCommunication\TelegramBundle\Service;
 
-use JustCommunication\TelegramBundle\Service\FuncHelper;
+use JustCommunication\FuncBundle\Service\FuncHelper;
 use JustCommunication\TelegramBundle\Service\SmsAeroHelper;
 use JustCommunication\TelegramBundle\Service\TelegramHelper;
 
@@ -154,7 +154,7 @@ class TelegramWebhook
     public function helpUserCommand($params = []){
         //$role = 'User';
         $role = $this->user['role'];
-        $except_methods=array('helpUserCommand','helpSuperuserCommand','helpManagerCommand', 'none'.$role.'Command'); // Эти методы нельзя проверять на хелп
+        $except_methods=array('helpUserCommand','helpSuperuserCommand','helpManagerCommand', 'none'.$role.'Command', 'test'.$role.'Command'); // Эти методы нельзя проверять на хелп
         if ($role!='Superuser'){
             $except_methods[]='MakeMeGreatAgainUserCommand';// об этом методе может знать только суперюзер
         }
@@ -194,6 +194,49 @@ class TelegramWebhook
         return $this->helpUserCommand($params);
     }
 
+
+    public function testUserCommand($params = []){
+        $role = $this->user['role'];
+        $except_methods=array('helpUserCommand','helpSuperuserCommand','helpManagerCommand', 'none'.$role.'Command', 'test'.$role.'Command'); // Эти методы нельзя проверять на хелп
+        if ($role!='Superuser'){
+            $except_methods[]='MakeMeGreatAgainUserCommand';// об этом методе может знать только суперюзер
+        }
+        $methods = get_class_methods($this);
+
+        sort($methods);
+
+
+
+        $arr = array_filter($methods, function($method)use($role, $except_methods){
+            if (!in_array($method,$except_methods) && str_ends_with($method, $role.'Command')){
+                return true;
+            }else{
+                return false;
+            }
+        });
+        $arr = array_map(function($method)use($role){
+           return str_replace($role.'Command', '', $method);
+        }, $arr);
+
+        return json_encode(array_values($arr));
+
+        /*
+        $title =array(
+            'User'=> '*Список доступных команд:*',
+            'Manager'=> '*Список доступных для менеджера команд:*',
+            'Superuser'=> '*Список команд доступных для '.$role.':*',
+        );
+
+        return implode("\r\n", FuncHelper::array_cleanup(array_merge(
+            ["\xF0\x9F\x93\x84"],
+            [$title[$role]],
+            [''],
+            $arr), "string"));
+        */
+    }
+    public function testSuperuserCommand($params = []){
+        return $this->testUserCommand($params);
+    }
     //----------------------------------------------------------------------------------------------------------------//
     //----------------------------------------------------------------------------------------------------------------//
 
@@ -411,7 +454,7 @@ class TelegramWebhook
     }
 
 
-    public function getMyListUserCommand($params = []){
+    public function getMyEventsUserCommand($params = []){
         if ($this->isHelpMode($params)) {
             return
                 '*'.$this->getCommandName(__FUNCTION__).'*'."\r\n"
@@ -438,11 +481,11 @@ class TelegramWebhook
 
         return $text;
     }
-    public function getMyListSuperuserCommand($params = []){
-        return $this->getMyListUserCommand($params);
+    public function getMyEventsSuperuserCommand($params = []){
+        return $this->getMyEventsUserCommand($params);
     }
-    public function getMyListManagerCommand($params = []){
-        return $this->getMyListUserCommand($params);
+    public function getMyEventsManagerCommand($params = []){
+        return $this->getMyEventsUserCommand($params);
     }
 
 
@@ -556,7 +599,7 @@ class TelegramWebhook
      * @return string
      * @throws \Psr\Cache\InvalidArgumentException
      */
-    public function getSubscribeListUserCommand($params = []){
+    public function getEventsUserCommand($params = []){
         if ($this->isHelpMode($params)) {
             return
                 '*'.$this->getCommandName(__FUNCTION__).'*'."\r\n"
@@ -565,7 +608,8 @@ class TelegramWebhook
                 .'`'.$this->getCommandName(__FUNCTION__).'`' ."\r\n"
                 ;
         }
-        $list = $this->telegram->getEvents();
+        $force = isset($params[0])&&$params[0]=='force'?true:false;
+        $list = $this->telegram->getEvents($force);
         $addList = array();
         $removeList = array();
         foreach ($list as $name => $item){
@@ -580,17 +624,17 @@ class TelegramWebhook
                 . implode("\r\n", $addList) . "\r\n" . "\r\n"
                 . '*Для отмены подписки*:' . "\r\n"
                 . implode("\r\n", $removeList) . "\r\n" . "\r\n"
-                . 'Список уже подключенных подписок можно получить так: /getMyList';
+                . 'Список уже подключенных подписок можно получить так: /getMyEvents';
         }else{
             $text = '*Нет доступных подписок*:' . "\r\n";
         }
         return $text;
     }
-    public function getSubscribeListSuperuserCommand($params = []){
-        return $this->getSubscribeListUserCommand($params);
+    public function getEventsSuperuserCommand($params = []){
+        return $this->getEventsUserCommand($params);
     }
-    public function getSubscribeListManagerCommand($params = []){
-        return $this->getSubscribeListUserCommand($params);
+    public function getEventsManagerCommand($params = []){
+        return $this->getEventsUserCommand($params);
     }
 
 

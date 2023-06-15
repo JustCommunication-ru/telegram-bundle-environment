@@ -50,7 +50,7 @@ class MyTelegramWebhook extends TelegramWebhook
         }
     }
 
-    public function heLpUserCommand($params = []){
+    public function hellUserCommand($params = []){
         return 'ченадо?';
     }
 }
