@@ -22,6 +22,11 @@ doctrine:
                 dir: '%kernel.project_dir%/bundles/JustCommunication/TelegramBundle/src/Entity'
                 prefix: 'JustCommunication\TelegramBundle\Entity'
                 alias: JustCommunication\TelegramBundle
+            JustCommunication\SmsAeroBundle:
+                is_bundle: false
+                dir: '%kernel.project_dir%/bundles/JustCommunication/SmsAeroBundle/src/Entity'
+                prefix: 'JustCommunication\SmsAeroBundle\Entity'
+                alias: JustCommunication\SmsAeroBundle
 
 when@test:
     doctrine:

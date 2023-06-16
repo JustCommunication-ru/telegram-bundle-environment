@@ -16,10 +16,12 @@
         "doctrine/orm": "^2.15",
         "justcommunication/cache-bundle": "^0.0.1",
         "justcommunication/func-bundle": "^0.0.1",
+        "justcommunication/smsaero-bundle": "*",
         "justcommunication/telegram-bundle": "^0.0.1",
         "predis/predis": "^2.1",
         "symfony/console": "6.3.*",
         "symfony/dotenv": "6.3.*",
+        "symfony/event-dispatcher-contracts": "^3.3",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "6.3.*",
         "symfony/http-client": "6.3.*",
@@ -40,6 +42,10 @@
         {
             "type": "path",
             "url":  "./bundles/JustCommunication/FuncBundle"
+        },
+        {
+            "type": "path",
+            "url":  "./bundles/JustCommunication/SmsAeroBundle"
         }
     ],
     "config": {

@@ -2,13 +2,15 @@
 
 namespace JustCommunication\TelegramBundle\Controller;
 
+use JustCommunication\FuncBundle\Service\FuncHelper;
+use JustCommunication\TelegramBundle\Event\TelegramEvent;
 use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
 use JustCommunication\TelegramBundle\Service\TelegramHelper;
 use JustCommunication\CacheBundle\Trait\CacheTrait;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -26,7 +28,7 @@ class NewController extends AbstractController{
 
 
     #[Route('/telega')]
-    public function index(ParameterBagInterface $bag, TelegramHelper $telegramHelper, TelegramEventRepository $eventRepository, TelegramUserRepository $telegramUserRepository){
+    public function index(ParameterBagInterface $bag, TelegramHelper $telegramHelper, TelegramEventRepository $eventRepository, TelegramUserRepository $telegramUserRepository, EventDispatcherInterface $eventDispatcher){
 
         //$x = $this->cached('telegram_event', function(){return 'AAA';}, true);
 
@@ -71,7 +73,12 @@ class NewController extends AbstractController{
         var_dump($x);
         */
         //return new Response('<h1>hello Telega</h1>');
-        return $this->render('@Telegram/new/index.html.twig', ['raw'=>'<h1>hello Telega'.$this->my_param.'</h1>', 'APP_NAME'=>'sdfasdfs']);
+
+        //$x = $telegramUserRepository->getUsers(true);
+        //var_dump($x);
+
+        //FuncHelper::objects_sort_by_field();
+        return $this->render('@Telegram/new/index.html.twig', ['raw'=>'<h1>hello Telega</h1>', 'variable'=>'sdfasdfs']);
     }
 
 

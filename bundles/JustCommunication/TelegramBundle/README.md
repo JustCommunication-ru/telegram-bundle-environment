@@ -131,4 +131,24 @@ public function makebutterbrodUserCommand($params = []){
 }
 ```
 
+## Рассылка сообщений. События.
+Изначально работа с отправкой сообщений или рассылкой задумывалась с использованием хелпера.
 
+С помощью autowire получаем доступ к объекту `TelegramHelper $telegramHelper`
+
+Далее отправляем сообщения:
+
+`$this->telegram->event('Error', 'Текст уведомления');`
+
+В попытке найти способ использовать Уведомления через телеграмм независимо (например пакет не установлен) был реализован способ отправки через Sumfony eventDispatcher,
+
+С помощью autowire получаем доступ к объекту `EventDispatcherInterface $eventDispatcher`
+
+Далее отправляем сообщения:
+
+```
+$event = new TelegramEvent("Error", 'TEST TEST TEST');
+$this->eventDispatcher->dispatch($event, TelegramEvent::class);
+```
+
+Метод рабочий, но требует `use JustCommunication\TelegramBundle\Event\TelegramEvent;`

@@ -189,33 +189,8 @@ class TelegramCommand extends Command
             $this->io->success('end');
 
         }elseif ($input->getOption('testw')) {
-
-            $admin_chat_id = (int)$this->telegram->config["admin_chat_id"];
-            $webhook_url_path = $this->router->generate('jc_telegram_webhook');
-
-            $paramaters = array(
-                'update_id' => 1,
-                'message' => array(
-                    'message_id' => 1,
-                    'from' => array(
-                        'id' => $admin_chat_id,
-                        'first_name' => 'ProjectAdmin',
-                        'username' => 'Projectadmin'
-                    ),
-                    'text' => '/MakeMeGreatAgain',
-                    'date' => date("U"),
-                    'entities' => array()
-                )
-            );
-
-            $_GET['command_request'] = '1';
-            $_GET['token'] = $this->telegram->config['token'];
-            $request = Request::create($webhook_url_path, 'POST', array(), array(), array(), array(), json_encode($paramaters));
-            $response = $this->kernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-
-
-            $res = json_decode($response->getContent(), true);
-
+            $this->io->info('Action: testw (Test Webhook Commands)');
+            $this->telegramTestWebhookommands();
 
         }elseif ($input->getOption('webhook')!='EMPTY') {
 
@@ -395,7 +370,7 @@ class TelegramCommand extends Command
         /// 3) Проверка отправки сообщения админу
         $all_is_good_go_on_dude=3;
 
-        $mess = '*php bin/console '.$this->getName().' --init* Проверка отправки сообщения из '.$_ENV['APP_NAME']. ' для администратора.';
+        $mess = '*php bin/console '.$this->getName().' --init* Проверка отправки сообщения из '.$this->telegram->config['app_name']. ' для администратора.';
         $res_send = $this->telegram->sendMessage($admin_chat_id, $mess);
         if ($res_send) {
             if ($res_send['ok']) {
@@ -599,6 +574,29 @@ class TelegramCommand extends Command
             return null;
         }
 
+    }
+
+
+    /**
+     * Выгружаем доступные команды и отправляем их одна за одной без верификации результата
+     * @return void
+     */
+    private function telegramTestWebhookommands(){
+
+        $res = $this->sendMessageToLocalWebhook('/getBotCommands');
+        $admin_chat_id = (int)$this->telegram->config["admin_chat_id"];
+
+        if ($res){
+            $arr = json_decode($res['responce'], true);
+            $this->io->block('Found '.count($arr).' available commands: '.implode(', ', $arr));
+
+            foreach ($arr as $command){
+                $res = $this->telegram->sendMessage($admin_chat_id, '/' . $command);
+                $act_res = $this->sendMessageToLocalWebhook('/' . $command);
+                $this->io->block('/' . $command . ' sended (' . ($act_res&&$act_res['result']=='ok' ? 'success' : 'fail') . ')');
+            }
+
+        }
     }
 
 }

@@ -10,4 +10,5 @@ return [
     JustCommunication\TelegramBundle\TelegramBundle::class => ['all' => true],
     JustCommunication\CacheBundle\CacheBundle::class => ['all' => true],
     JustCommunication\FuncBundle\FuncBundle::class => ['all' => true],
+    JustCommunication\SmsAeroBundle\SmsAeroBundle::class => ['all' => true],
 ];

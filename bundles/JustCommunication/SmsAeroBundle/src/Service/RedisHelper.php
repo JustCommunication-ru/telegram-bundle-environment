@@ -1,6 +1,6 @@
 <?php
 
-namespace JustCommunication\TelegramBundle\Service;
+namespace JustCommunication\SmsAeroBundle\Service;
 
 /**
  * Собственно хелпер только для того, чтобы было единое место инициализации и использование конфигов.

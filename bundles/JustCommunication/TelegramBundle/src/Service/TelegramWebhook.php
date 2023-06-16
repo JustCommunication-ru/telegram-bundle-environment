@@ -3,9 +3,6 @@
 namespace JustCommunication\TelegramBundle\Service;
 
 use JustCommunication\FuncBundle\Service\FuncHelper;
-use JustCommunication\TelegramBundle\Service\SmsAeroHelper;
-use JustCommunication\TelegramBundle\Service\TelegramHelper;
-
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 /**
@@ -17,33 +14,29 @@ class TelegramWebhook
     /**
      * @var array
      */
-    private $user;
+    protected $user;
 
     /**
      * @var String
      */
-    private $mess;
+    protected $mess;
 
     /**
      * @var TelegramHelper
      */
-    private $telegram;
+    protected $telegram;
 
     /**
      * @var ParameterBagInterface
      */
-    private $services_yaml_params;
+    protected $services_yaml_params;
 
-    /**
-     * @var SmsAeroHelper
-     */
-    private $smsAeroHelper;
 
-    public function __construct(TelegramHelper $telegram, ParameterBagInterface $services_yaml_params, SmsAeroHelper $smsAeroHelper)
+
+    public function __construct(TelegramHelper $telegram, ParameterBagInterface $services_yaml_params)
     {
         $this->telegram = $telegram;
         $this->services_yaml_params = $services_yaml_params;
-        $this->smsAeroHelper = $smsAeroHelper;
     }
 
 
@@ -56,17 +49,18 @@ class TelegramWebhook
         return $this;
     }
 
-    private function isHelpMode($params = []){
+    protected function isHelpMode($params = []){
         return in_array('-h', $params);
     }
 
     /**
      * По названию метода определяет его telegram-команду (с лидирующим слешем)
      * Обязательное условие - название роли с большой буквы, остальные маленькие. это условие контроллируется в контроллере :D
+     * 2023-06-16 А почему мы не отрезаем *Role*Comand?? Это же проще
      * @param string $methodName
      * @return string
      */
-    private function getCommandName(string $methodName):string{
+    protected function getCommandName(string $methodName):string{
         $b = preg_split('/(?<=[a-z])(?=[A-Z])/u',$methodName);
         // это прекрасно конечно, но мне нужно отрезать только последние два
         if (count($b)>=3) {
@@ -195,17 +189,18 @@ class TelegramWebhook
     }
 
 
-    public function testUserCommand($params = []){
-        $role = $this->user['role'];
-        $except_methods=array('helpUserCommand','helpSuperuserCommand','helpManagerCommand', 'none'.$role.'Command', 'test'.$role.'Command'); // Эти методы нельзя проверять на хелп
-        if ($role!='Superuser'){
-            $except_methods[]='MakeMeGreatAgainUserCommand';// об этом методе может знать только суперюзер
-        }
+    /**
+     * Только для суперюзера, список доступных команд
+     * @param $params
+     * @return false|string
+     */
+    public function getBotCommandsSuperuserCommand($params = []){
+        $role = $this->user['role']; // Может тестировать команды именно Юзера?
+        $except_methods=array('MakeMeGreatAgain'.$role.'Command', 'help'.$role.'Command', 'none'.$role.'Command', 'getBotCommands'.$role.'Command'); // Эти методы нельзя проверять на хелп
+
         $methods = get_class_methods($this);
 
         sort($methods);
-
-
 
         $arr = array_filter($methods, function($method)use($role, $except_methods){
             if (!in_array($method,$except_methods) && str_ends_with($method, $role.'Command')){
@@ -219,24 +214,8 @@ class TelegramWebhook
         }, $arr);
 
         return json_encode(array_values($arr));
-
-        /*
-        $title =array(
-            'User'=> '*Список доступных команд:*',
-            'Manager'=> '*Список доступных для менеджера команд:*',
-            'Superuser'=> '*Список команд доступных для '.$role.':*',
-        );
-
-        return implode("\r\n", FuncHelper::array_cleanup(array_merge(
-            ["\xF0\x9F\x93\x84"],
-            [$title[$role]],
-            [''],
-            $arr), "string"));
-        */
     }
-    public function testSuperuserCommand($params = []){
-        return $this->testUserCommand($params);
-    }
+
     //----------------------------------------------------------------------------------------------------------------//
     //----------------------------------------------------------------------------------------------------------------//
 
@@ -265,7 +244,7 @@ class TelegramWebhook
             '*Имя*: '. $this->user['first_name']."\r\n"
             .'*Логин*: '. $this->user['username']."\r\n"
             .'*Id*: '. $this->user['user_chat_id']."\r\n"
-            .'*Дата первого обращения*: '. $this->user['datein']."\r\n"
+            .'*Дата первого обращения*: '. $this->user['datein']->format('d.m.Y')."\r\n"
             .'*Статус*: '.($status[$this->user['role']]??'').' ['.$this->user['role'].']'."\r\n"
             ;
     }
@@ -281,7 +260,7 @@ class TelegramWebhook
      * Информация о вебхуке
      * @return string
      */
-    public function getwebhookinfoSuperuserCommand($params = []){
+    public function getWebhookInfoSuperuserCommand($params = []){
         if ($this->isHelpMode($params)) {
             return
                 '*'.$this->getCommandName(__FUNCTION__).'*'."\r\n"
@@ -473,7 +452,7 @@ class TelegramWebhook
             $text = '*Мои подписки*:' . "\r\n";
             foreach ($my_list as $ml){
 
-                $text .= '`-`'.$list[$ml['name']]['note'] . ' c ' . $ml['datein'] . "\r\n";
+                $text .= '[- ]'.$list[$ml->getName()]['note'] . ' c ' . $ml->getDatein()->format('d.m.Y') . "\r\n";
             }
         }else{
             $text = 'У вас нет активных подписок.';
@@ -540,7 +519,7 @@ class TelegramWebhook
 
                         .$this->listColFormat(($u['username']!=''?' @'.$u['username']:''), 20, 'left')
                         .$this->listColFormat(' *' . $u['role'] . '* ', 9, 'left')
-                        . FuncHelper::dateDB($u['datein'], "d.m.Y") . ''
+                        . $u['datein']->format('d.m.Y')
                         .($u['id_user']?" \xF0\x9F\x93\x8C".$u['id_user'].' ':'')
                         . "\r\n"
                     ;
@@ -556,10 +535,10 @@ class TelegramWebhook
         return ['text'=> $text, 'parse_mode'=>'Markdown'];
     }
 
-    private function listColFormat(mixed $str, int $len, $align="right",$encoding='UTF-8' ):string{
+    protected function listColFormat(mixed $str, int $len, $align="right",$encoding='UTF-8' ):string{
 
         $mb_diff=strlen($str)-mb_strlen($str, $encoding);
-        return str_pad($str.'', $len+$mb_diff, " ", $align=="center"?STR_PAD_BOTH:($align=="left"?STR_PAD_RIGHT:STR_PAD_LEFT));
+        return mb_substr(str_pad($str.'', $len+$mb_diff, " ", $align=="center"?STR_PAD_BOTH:($align=="left"?STR_PAD_RIGHT:STR_PAD_LEFT)), 0, $len);
     }
 
     public function howUserCommand($params = []){
@@ -579,7 +558,7 @@ class TelegramWebhook
             . '``` `гравис - монотекст` ``` `гравис - монотекст` '."\r\n".'вставка необрабатываемого текста/кода, есть еще три грависа, вставка блока кода, можно указать название языка' . "\r\n"
             . '``` [[что * угодно]]``` [[что * угодно]] '."\r\n".'двойные квадратные скобки превращаются в одинарные и отменяют внутри них маркдаун, ' . "\r\n"
             . 'но помним что в открытом маркдауне квадратные скобки не работают уже' . "\r\n"
-            . '``` \[текст]``` \[текст] '."\r\n".'открывающуюся квадратную скобка при обычных обстаятельствах надо экранировать бэкслешем' . "\r\n"
+            . '``` \[текст]``` \[текст] '."\r\n".'открывающуюся квадратную скобку при обычных обстаятельствах надо экранировать бэкслешем' . "\r\n"
             . '``` \@usename``` @username '."\r\n".'упоминания пользователей по username' . "\r\n"
         ;
         return $text;
@@ -637,108 +616,6 @@ class TelegramWebhook
         return $this->getEventsUserCommand($params);
     }
 
-
-    /**
-     * Конфиги смс
-     * @param $params
-     * @return string
-     */
-    public function smsConfSuperuserCommand($params = []){
-        if ($this->isHelpMode($params)) {
-            return
-                '*'.$this->getCommandName(__FUNCTION__).'*'."\r\n"
-                .'*Описание*: '."\r\n"
-                .'*Использование*: '."\r\n"
-                .'`'.$this->getCommandName(__FUNCTION__).'`' ."\r\n"
-                ;
-        }
-        // берем местные конфиги напрямую
-        $smsaero_config = $this->services_yaml_params->get('smsaero');
-        $text = '*SmsAero конфигурация:*'."\r\n".
-            '*Состояние*: '.($smsaero_config['stub']?'режим заглушки':'включён')."\r\n".
-            '*Логин*: '.$smsaero_config['login']."\r\n".
-            '*Url*: '.$smsaero_config['url']."\r\n".
-            '*Логирование*: '.($smsaero_config['log_sms']?'включено':'выключено')."\r\n".
-            '*Лимит сообщений с одного IP*: '.$smsaero_config["day_limit_per_ip"]."\r\n".
-            "\r\n".
-            'Посмотреть статистику отправки смс /smsStat';
-        return $text;
-    }
-
-
-    /**
-     * Статистика отправки смс
-     * @param $params
-     * @return string
-     */
-    public function smsStatSuperuserCommand($params = []){
-        if ($this->isHelpMode($params)) {
-            return
-                '*'.$this->getCommandName(__FUNCTION__).'*'."\r\n"
-                .'*Описание*: '."\r\n"
-                .'*Использование*: '."\r\n"
-                .'`'.$this->getCommandName(__FUNCTION__).'`' ."\r\n"
-                ;
-        }
-        $rows = $this->smsAeroHelper->getSendedMessageDayStat();
-
-
-        $text = 'SmsAero статистика за сутки:'."\r\n";
-        if (count($rows)){
-            foreach($rows as $row) {
-                $text .= '`' . $row['ip'].str_repeat(' ',15-strlen($row['ip'])).' '.$row['count_sended'].'/'.($row['count_sended']+$row['count_banned']).' '.$row['phones'].'`'."\r\n";
-            }
-            $text .= '`ip.address sended/tries phones...`'."\r\n";
-
-        }else{
-
-            $text.='нет отправок.';
-        }
-
-        return $text;
-    }
-
-
-    /**
-     * отправка смс
-     * @param $params
-     * @return string
-     * @throws \Doctrine\DBAL\Exception
-     */
-    public function smsSendSuperuserCommand($params = []){
-        if ($this->isHelpMode($params)) {
-            return
-                '*'.$this->getCommandName(__FUNCTION__).'*'."\r\n"
-                .'*Описание*: '."\r\n"
-                .'*Использование*: '."\r\n"
-                .'`'.$this->getCommandName(__FUNCTION__).'`' ."\r\n"
-                ;
-        }
-        // по своему распарсим команду. нам нужно конкретно два параметра
-        if (strpos($this->mess, " ")>0){
-            $arr = explode(" ",str_replace("/", "", $this->mess), 3);
-        }else{
-            $params = array();
-        }
-        $phone = isset($arr[1])?str_replace('+', '', $arr[1]):"";
-        $sms_mess = $arr[2]??"";
-
-        if ($phone=="" || $sms_mess==""){
-            $text = 'Для команды необходимо указать два параметра: телефон и сообщение, формат такой: "/smsSend +79009990909 все остальное это текст сообщения"';
-        }else {
-            if (strlen($phone) == 11) {
-                $sended =  $this->smsAeroHelper->send($phone, $sms_mess, 'send');
-
-                $text =  $this->smsAeroHelper->getFailMessage();
-
-            } else {
-                $text = 'Не корректный формат номера телефона, должно быть 11 цифр';
-            }
-        }
-        return $text;
-    }
-
-
     public function startUserCommand($params = []){
         if ($this->isHelpMode($params)) {
             return
@@ -748,18 +625,10 @@ class TelegramWebhook
                 .'`'.$this->getCommandName(__FUNCTION__).'`' ."\r\n"
                 ;
         }
-        /*
-        $text = 'Добро пожаловать в бескрайний уютный рассадник ограниченых всевозможностей и исчерпывающих недоработок.' . "\r\n"
-            . 'Узнать список всех подписок: /getSubscribeList' . "\r\n"
-            . 'Узнать список подключенных подписок: /getMyList' . "\r\n"
-            . 'Полный список команд: /help';
-        */
-        //$text = 'Добро пожаловать, теперь '.$_ENV['APP_MARKETPLACE_NAME'].' в Вашем телефоне, чтобы подключиться к своему личному кабинету нажмите *Пройти идентификацию* и подтвердите отправку своего контакта.' . "\r\n";
-        //return $text;
 
         if ($this->user['phone']=='') {
             return [
-                'text' => 'Добро пожаловать, теперь ' . $_ENV['APP_MARKETPLACE_NAME'] . ' в Вашем телефоне, чтобы подключиться к своему личному кабинету нажмите *Пройти идентификацию* и подтвердите отправку своего контакта.' . "\r\n",
+                'text' => 'Добро пожаловать, теперь ' . $this->telegram->config['app_name'] . ' в Вашем телефоне! Чтобы подключиться к своему личному кабинету нажмите *Пройти идентификацию* и подтвердите отправку своего контакта.' . "\r\n",
 
                 'reply_markup' => json_encode([
                     'keyboard' => [
@@ -788,7 +657,8 @@ class TelegramWebhook
         if ($this->user['phone']=='') {
             return $this->startUserCommand($params);
         }else{
-            // Свою менюшку задаем.
+            // Свою менюшку задаем. Не реализовано
+            return $this->startUserCommand($params);
         }
     }
 

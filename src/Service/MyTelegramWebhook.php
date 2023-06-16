@@ -2,26 +2,12 @@
 
 namespace App\Service;
 
-use JustCommunication\TelegramBundle\Service\FuncHelper;
-use JustCommunication\TelegramBundle\Service\SmsAeroHelper;
-use JustCommunication\TelegramBundle\Service\TelegramHelper;
-
-use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use JustCommunication\SmsAeroBundle\Trait\SmsAeroWebhookTrait;
 use JustCommunication\TelegramBundle\Service\TelegramWebhook;
 
-/**
- * Контролер по сути нужен только для webhook-а
- * Вся логика общения с пользователем прям тут, работа с телеграм через сервис TelegramHelper
- */
-//#[AsDecorator(decorates: \JustCommunication\TelegramBundle\Service\TelegramWebhook::class)]
 class MyTelegramWebhook extends TelegramWebhook
 {
-
-    public function __construct(TelegramHelper $telegram, ParameterBagInterface $services_yaml_params, SmsAeroHelper $smsAeroHelper)
-    {
-        parent::__construct($telegram, $services_yaml_params, $smsAeroHelper);
-    }
+    use SmsAeroWebhookTrait;
 
     /**
      * Реакция на сообщение от пользователя не содержащее команды

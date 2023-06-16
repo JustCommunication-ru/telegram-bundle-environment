@@ -519,7 +519,8 @@ class FuncHelper
                 $arr[$index]['_array_sort_key']=$index;
             }
             // 2018-07-10 при сортировке опускаем в лоуверкейс, пример e-NV200 оказывался послесписка
-            $sort_arr[$index]=  mb_strtolower($row[$field]);
+            // 2023-06-16 при этом ловеркейсим только строки!
+            $sort_arr[$index]=  is_string($row[$field])?mb_strtolower($row[$field]):$row[$field];
         }
         array_multisort($sort_arr, $order,$arr);
         if ($save_keys){
@@ -533,6 +534,16 @@ class FuncHelper
         }
         return $arr;
     }
+
+/*
+    static public function objects_sort_by_field(array $objects_array, string $field): array{
+        usort($objects_array, function ($object1, $object2) use ($field) {
+            if ($object1->$field == $object2->$field) return 0;
+            return ($object1->$field > $object2->$field) ? -1 : 1;
+        });
+    }
+    */
+
 
 
     /**+

@@ -37,6 +37,9 @@ services:
     #JustCommunication\TelegramBundle\Service\TelegramWebhook:
     #    class: App\Service\TelegramWebhook
 
+    App\:
+        resource: '../src/'
+
     app.service.mytelegramwebhook:
         class: App\Service\MyTelegramWebhook
 

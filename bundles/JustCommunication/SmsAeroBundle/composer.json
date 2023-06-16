@@ -1,0 +1,26 @@
+{
+    "name": "justcommunication/smsaero-bundle",
+    "description": "SmsAero bundle",
+    "version": "0.0.1",
+    "type": "symfony-bundle",
+    "keywords": ["sms","smsaero"],
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.1"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "JustCommunication\\SmsAeroBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JustCommunication\\SmsAeroBundle\\Tests\\": "tests/"
+        }
+    }
+}

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8c3cccd8e9d027b80d831593433b7f8f",
+    "content-hash": "502e85195f2ee5815e1e86b35ad051ed",
     "packages": [
         {
             "name": "doctrine/annotations",
@@ -1460,6 +1460,40 @@
                 "date",
                 "functions",
                 "string"
+            ],
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
+            "name": "justcommunication/smsaero-bundle",
+            "version": "0.0.1",
+            "dist": {
+                "type": "path",
+                "url": "./bundles/JustCommunication/SmsAeroBundle",
+                "reference": "cf6c6b7cc11ffcab09e3ba17bc4694607a801f60"
+            },
+            "require": {
+                "php": ">=8.1"
+            },
+            "type": "symfony-bundle",
+            "autoload": {
+                "psr-4": {
+                    "JustCommunication\\SmsAeroBundle\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "JustCommunication\\SmsAeroBundle\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "SmsAero bundle",
+            "keywords": [
+                "sms",
+                "smsaero"
             ],
             "transport-options": {
                 "relative": true

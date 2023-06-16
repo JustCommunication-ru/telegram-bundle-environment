@@ -1,0 +1,22 @@
+parameters:
+    redis:
+        parameters:
+            scheme: 'tcp'
+            host: '127.0.0.1'
+            port: 6379
+        options:
+            zzz: 10
+    smsaero:
+        url: "http://gate.smsaero.ru/v2/"
+        login: "%env(SMSAERO_LOGIN)%"
+        password: "%env(SMSAERO_PASSWORD)%"
+        sign: "SMS Aero" # Подпись отправителя. Необходимо зарегистрировать перед использованием
+        stub: 1 # Режим заглушки. Сервис кивает хоботом, что всё отправил, логирует, но не отправляет
+        log_sms: 1 # Логирование отправлений в бд (необходимо для ограничения)
+        day_limit_per_ip: 20 # ограничение отправляемых смс с одного Ip за сутки работает только при log_sms: 1
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+    JustCommunication\SmsAeroBundle\:
+        resource: '../src/'

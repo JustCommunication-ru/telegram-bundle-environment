@@ -10,6 +10,7 @@ telegram:
     proxy: ""
     proxy_auth: "" #login:pass
     token: "%env(JC_TELEGRAM_TOKEN)%"
+    app_name: "%env(APP_NAME)%"
     app_url: "%env(APP_URL)%"
     production_webhook_app_url: "" # чтобы при запуске из локала не сбивать реально работающий хук боевой адрес необходимо указать здесь
     wrong_event_exception: true # ронять скрипты при попытке отправить несуществующий event, можно считать эту опцию strict mode

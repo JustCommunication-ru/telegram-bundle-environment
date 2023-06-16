@@ -1,15 +1,17 @@
 <?php
 
-namespace JustCommunication\TelegramBundle\Service;
+namespace JustCommunication\SmsAeroBundle\Service;
 
-use Doctrine\DBAL\Connection;
 use JustCommunication\FuncBundle\Service\FuncHelper;
+use JustCommunication\SmsAeroBundle\Event\SmsAeroEvent;
+use JustCommunication\SmsAeroBundle\Repository\LogSmsRepository;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Библиотечка для отправки смс по api сервиса SmsAero
- * Требует наличия сервисов $redisHelper, $telegramHelper
+ * Требует наличия "сервиса" $redisHelper
  * Кеш переведен на кросс-платформенную редиску
  *
  * Специаильный массив в редиске фиксирует только превышение лимита (то есть, пока лимит не превышен, записей в нем нет)
@@ -19,10 +21,10 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 class SmsAeroHelper
 {
     public array $config;
-    private $db = null;
     public $debug = array();
-    public $redis = null;
-    public $telegram = null;
+    public $redis;
+    public LogSmsRepository $logSmsRepository;
+    public EventDispatcherInterface $eventDispatcher;
 
     const REDIS_KEY = 'sms_send_over';
     const RESULT_CODE_SUCCESS = 1;
@@ -33,47 +35,24 @@ class SmsAeroHelper
     const RESULT_CODE_LIMIT_OVER = 9;
 
 
-    public function __construct(ParameterBagInterface $params, Connection $connection, RedisHelper $redisHelper, TelegramHelper $telegramHelper, LoggerInterface $logger)
+    public function __construct(ParameterBagInterface $params,
+                                RedisHelper $redisHelper, LoggerInterface $logger,
+                                LogSmsRepository $logSmsRepository, EventDispatcherInterface $eventDispatcher)
     {
         $this->config = $params->get("smsaero");
-        $this->db = $connection;
         $this->redis = $redisHelper->getClient();
-        $this->telegram = $telegramHelper;
         $this->logger = $logger;
+        $this->logSmsRepository = $logSmsRepository;
+        $this->eventDispatcher = $eventDispatcher;
     }
 
     public function resend($id){
         //send($phone, $text, $action='default', $code='', $try=1);
     }
 
-    /**
-     * Выборка количество отправленных смс с одного ip за последние сутки, для определения превышения лимита
-     * @param $ip
-     * @return false|mixed
-     * @throws \Doctrine\DBAL\Exception
-     */
-    public function getSendedMessageCountByIp($ip){
-        // result_code 1-success_send, 5-stub, 6-error, 9-ban
-        $statement = $this->db->prepare('SELECT COUNT(*) as cnt FROM log_sms WHERE datein>NOW()-interval 1 DAY AND ip="'.$ip.'" AND result_code IN (1,5)');
-        $result = $statement->executeQuery();
-        $row = $result->fetchAssociative();
-        return $row['cnt']??false;
-    }
-
-
-    /**
-     * Выборка статистики отправленных смс с группировкой по ip за прошедшие сутки
-     * @return array[]
-     * @throws \Doctrine\DBAL\Exception
-     */
     public function getSendedMessageDayStat(){
-        // result_code 1-success_send, 5-stub, 6-error, 9-ban
-        $statement = $this->db->prepare('SELECT ip, GROUP_CONCAT(distinct phone SEPARATOR ",") AS phones, SUM(if(result_code=1 or result_code=5, 1, 0)) AS count_sended, SUM(if(result_code=9, 1, 0)) AS count_banned FROM log_sms WHERE datein>NOW()-interval 1 DAY GROUP BY ip ORDER BY count_banned, count_sended');
-        $result = $statement->executeQuery();
-        $rows = $result->fetchAllAssociative();
-        return $rows;
+        return $this->logSmsRepository->getSendedMessageDayStat();
     }
-
 
     /**
      * Отправка сообщений
@@ -89,16 +68,18 @@ class SmsAeroHelper
      */
     public function send($phone, $text, $action='default', $code='', int $id_users=0, int $try=1, string $ip=''){
 
+
         // Проверяем телефон на корректность, доп условие, надо чтобы он потом в базу в поле на 12 символов поместился
         if ($ip=='') {
             $ip = FuncHelper::GetIP();
         }
 
+
         // $this->config['day_limit_per_ip']
         //$reg_limit_allow = Celib::getInstance('Module:Users')->cache_counter('phone_reg_'.$this->auth4->id, $tries, $time);
 
         // заглушки тоже считает
-        $count_by_ip = $this->getSendedMessageCountByIp($ip);
+        $count_by_ip = $this->logSmsRepository->getSendedMessageCountByIp($ip);
         // 1) проверка превышения лимита отправки с ip
         if ($count_by_ip<$this->config['day_limit_per_ip']) {
             $this->redis->hdel(self::REDIS_KEY, $ip); // Если нет превышения будем перманенто чистить запись
@@ -126,6 +107,7 @@ class SmsAeroHelper
                     'result' => 'Stub success.',
                     'result_code' => $result_code
                 );
+
             // если всё хорошо пробуем отправить
             } else {
                 $ch = curl_init();
@@ -197,7 +179,10 @@ class SmsAeroHelper
 
             if (!$current_value){
                 $this->redis->hset(self::REDIS_KEY, $ip, json_encode(array('count'=>$count_by_ip+1, 'last_date'=>date('Y-m-d H:i:s'), 'U'=>date('U'))));
-                $this->telegram->event('Smsover', 'Превышение лимита отправки смс ('.$this->config['day_limit_per_ip'].') с одного ip ('.$ip.')');
+                //$this->telegram->event('Smsover', 'Превышение лимита отправки смс ('.$this->config['day_limit_per_ip'].') с одного ip ('.$ip.')');
+
+                $event = new SmsAeroEvent("Smsover", 'Превышение лимита отправки смс ('.$this->config['day_limit_per_ip'].') с одного ip ('.$ip.')');
+                $this->eventDispatcher->dispatch($event, SmsAeroEvent::class);
             }else{
                 //$this->redis->hincrby(self::REDIS_KEY,$ip, 1); // сюда кстати можно тоже не инкремент а сет делать
                 $this->redis->hset(self::REDIS_KEY,$ip, json_encode(array('count'=>1, 'last_date'=>date('Y-m-d H:i:s'), 'U'=>date('U'))));
@@ -206,16 +191,15 @@ class SmsAeroHelper
             //$redis->hincrby($key,$ip, 1);
             //$list = $redis->hgetall($key);
             //var_dump($list);
-
         }
 
         // Если включено логирование отправленных смс. Должна быть табличка log_sms (LogSms Entity)
         if ($this->config['log_sms']){
 
             $values = array(
-                'id_users'=>$id_users,
+                'id_user'=>$id_users,
                 'phone'=>$phone,
-                'action'=>'smsaero:'.$action,
+                'action'=>$action,
                 'code' =>$code,
                 'mess'=>$text,
                 'try'=>$try,
@@ -224,11 +208,7 @@ class SmsAeroHelper
                 'result'=>$result,
                 'result_code'=>$result_code
             );
-
-            $affected_rows = $this->db->executeStatement(
-                'INSERT INTO log_sms SET id_users=?, datein=now(), phone=?, action=?, code=?, mess=?, try=?, ip=?, sended=?, result=?, result_code=?',
-                array_values($values) //,$flatTypes
-            );
+            $this->logSmsRepository->newLog($values);
         }
 
         //return $sended || $this->config['stub'];
