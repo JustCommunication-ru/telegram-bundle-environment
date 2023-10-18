@@ -14,42 +14,42 @@ class TelegramWebhook
     /**
      * @var array
      */
-    protected $user;
+    protected array $user;
 
     /**
      * @var String
      */
-    protected $mess;
+    protected string $mess;
 
     /**
      * @var TelegramHelper
      */
-    protected $telegram;
+    protected TelegramHelper $telegram;
 
     /**
      * @var ParameterBagInterface
      */
-    protected $services_yaml_params;
+    protected ParameterBagInterface $services_yaml_params;
 
 
 
     public function __construct(TelegramHelper $telegram, ParameterBagInterface $services_yaml_params)
     {
         $this->telegram = $telegram;
-        $this->services_yaml_params = $services_yaml_params;
+        $this->services_yaml_params = $services_yaml_params; // данные конфигурации могут понадобится в наследуемых классах
     }
 
 
-    public function setUser($user){
+    public function setUser($user):self{
         $this->user = $user;
         return $this;
     }
-    public function setMess($mess){
+    public function setMess($mess):self{
         $this->mess = $mess;
         return $this;
     }
 
-    protected function isHelpMode($params = []){
+    protected function isHelpMode($params = []):bool{
         return in_array('-h', $params);
     }
 
@@ -98,6 +98,12 @@ class TelegramWebhook
         }
     }
 
+    /**
+     * Специальный метод на случай, если пользователь указал в сообщении команду для которой нет обработчика
+     * @param $command
+     * @param $role
+     * @return string
+     */
     public function commandNotFound($command, $role){
 
         // Тут можно реализовать поиск команды по списку методов.
@@ -128,7 +134,7 @@ class TelegramWebhook
         }
         $similar = array_unique($similar);
         $ans_arr = array(
-            'Неизвестная команда `/'.$command.'`. '.($found?'Возможно у вас не достаточно прав на ее выполнение':'').''."\r\n"
+            'Неизвестная команда `/'.$command.'`. '.($found?'Возможно у вас не достаточно прав на ее выполнение':'')."\r\n"
             .(count($similar)?'Возможно вы имели в виду: '.implode(', ',$similar):''),
             //'Команду не понял.',
             //'Я же не искусственный интелект, работаю только по аргалитму',
@@ -142,13 +148,13 @@ class TelegramWebhook
     /**
      * Магический метод генерирующий справку по всем доступным пользователю функциям
      * Если у комманды не будет хелп-модуля то он просто выполнится!!! Кто так сделает, тому руки оторвать!
-     * @param $params
+     * @param array $params
      * @return string
      */
-    public function helpUserCommand($params = []){
-        //$role = 'User';
+    public function helpUserCommand(array $params = []){
         $role = $this->user['role'];
-        $except_methods=array('helpUserCommand','helpSuperuserCommand','helpManagerCommand', 'none'.$role.'Command', 'test'.$role.'Command'); // Эти методы нельзя проверять на хелп
+
+        $except_methods=array('helpUserCommand','helpSuperuserCommand','helpManagerCommand', 'getBotCommands'.$role.'Command', 'none'.$role.'Command', 'test'.$role.'Command'); // Эти методы нельзя проверять на хелп
         if ($role!='Superuser'){
             $except_methods[]='MakeMeGreatAgainUserCommand';// об этом методе может знать только суперюзер
         }
@@ -157,15 +163,12 @@ class TelegramWebhook
 
         //var_dump($methods);
 
-
         $arr = array_map(function($method)use($role, $except_methods){
             if (!in_array($method,$except_methods) && str_ends_with($method, $role.'Command')){
 
                 return $this->$method(['-h']);
             }else{
-                //echo $method.' deniy'."\r\n";
                 return '';
-                //return '*XXXXXXXXXXX* '.$this->$method(['-h']);
             }
         }, $methods);
 
@@ -195,6 +198,15 @@ class TelegramWebhook
      * @return false|string
      */
     public function getBotCommandsSuperuserCommand($params = []){
+        if ($this->isHelpMode($params)) {
+            return
+                '*'.$this->getCommandName(__FUNCTION__).'*'."\r\n"
+                .'*Описание*: Сервисный метод'."\r\n"
+                .'*Использование*: '."\r\n"
+                .'`'.$this->getCommandName(__FUNCTION__).'`' ."\r\n"
+                ;
+        }
+
         $role = $this->user['role']; // Может тестировать команды именно Юзера?
         $except_methods=array('MakeMeGreatAgain'.$role.'Command', 'help'.$role.'Command', 'none'.$role.'Command', 'getBotCommands'.$role.'Command'); // Эти методы нельзя проверять на хелп
 

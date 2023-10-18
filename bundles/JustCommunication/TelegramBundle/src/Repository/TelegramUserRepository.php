@@ -8,6 +8,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 /**
  * @method TelegramUser|null find($id, $lockMode = null, $lockVersion = null)
@@ -21,11 +22,15 @@ class TelegramUserRepository extends ServiceEntityRepository
     private EntityManagerInterface $em;
     const CACHE_NAME = 'telegram_users';
 
-    public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em)
+    public function __construct(ManagerRegistry $registry, LoggerInterface $logger, EntityManagerInterface $em, ParameterBagInterface $params)
     {
         parent::__construct($registry, TelegramUser::class);
         $this->logger = $logger;
         $this->em = $em;
+
+        // Лазить из репозитория в конфиги ну такое себе, но кому сейчас легко
+        $config = $params->get("justcommunication.telegram.config");
+        $this->user_entity_class = $config['user_entity_class'];
     }
 
     /**
@@ -40,7 +45,7 @@ class TelegramUserRepository extends ServiceEntityRepository
                 SELECT tu.id, tu.datein, tu.userChatId as user_chat_id, tu.firstName as first_name, tu.username, tu.superuser, tu.phone, tu.idUser as id_user, 
                 u.roles
                 FROM JustCommunication\TelegramBundle\Entity\TelegramUser tu
-                LEFT JOIN App\Entity\User u WITH tu.idUser=u.id
+                LEFT JOIN '.$this->user_entity_class.' u WITH tu.idUser=u.id
                 ')->getArrayResult();
             //return $this->ss::array_foreach($rows, true, 'user_chat_id');
             //return $rows;
@@ -222,7 +227,7 @@ class TelegramUserRepository extends ServiceEntityRepository
     public function findProjectUserByPhone($tel){
 
         $row = $this->em->createQuery('
-            SELECT u FROM App\Entity\User u
+            SELECT u FROM '.$this->user_entity_class.' u
             WHERE u.phone=:phone
             ')->setParameter('phone', $tel)
             ->getOneOrNullResult();
@@ -236,7 +241,7 @@ class TelegramUserRepository extends ServiceEntityRepository
      */
     public function findProjectUserBySuperuser(){
         //
-        $tableName = $this->em->getClassMetadata('App\Entity\User')->getTableName();
+        $tableName = $this->em->getClassMetadata($this->user_entity_class)->getTableName();
         // createQuery ругается на JSON_CONTAINS, поэтому на чистом sql
         $statement = $this->em->getConnection()->prepare('SELECT *  FROM '.$tableName.' WHERE JSON_CONTAINS(roles,\'"ROLE_SUPERUSER"\',"$")=1 ORDER BY id ASC LIMIT 1');
         $result = $statement->executeQuery();

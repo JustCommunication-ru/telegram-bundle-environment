@@ -70,6 +70,13 @@ class InstallCommand extends Command
             $usefull=true;
             // Конечно лучше скопировать из готового файла
             $config_content= file_get_contents(dirname(dirname(__DIR__)).DIRECTORY_SEPARATOR.$bundleConfigFilenamePath);
+            $content_lines = explode("\n", $config_content);
+            foreach ($content_lines as $i=>$line){
+                if (str_starts_with($line, "#")){
+                    unset($content_lines[$i]);
+                }
+            }
+            $config_content = implode("\n", $content_lines);
             $this->filesystem->appendToFile($this->projectDir.$bundleConfigFilenamePath, $config_content);
             $this->io->success('Bundle config created: "'.$bundleConfigFilenamePath.'"');
         }

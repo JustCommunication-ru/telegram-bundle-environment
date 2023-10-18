@@ -1,10 +1,4 @@
 parameters:
-    justcommunication.telegram.pumpum: "бандл.сервис-ямл низкий приоритет"
-    my_param: "берем прямо отседа"
-    arr:
-        - {per_day: "23", per_month: "423"}
-    arr2:
-        - { per_day: "23", per_month: "423" }-
 
 services:
     _defaults:

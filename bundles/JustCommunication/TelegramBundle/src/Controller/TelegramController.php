@@ -13,10 +13,15 @@ use Symfony\Component\Routing\Annotation\Route;
 /**
  * Контролер по сути нужен только для webhook-а
  * Вся логика общения с пользователем прям тут, работа с телеграм через сервис TelegramHelper
+ * @todo Логику общения с пользователем надо тоже вынести в вебхук, тут оставить только передачу параметров и вывод ответа
+ * @todo *Comand методы должны возвращать строго строку
+ * @todo WebhookInterface придумать
+ * @todo сделать таблицу emoji констант
  */
 class TelegramController extends AbstractController
 {
     private $webhook;
+    private TelegramHelper $telegram;
 
     // вместо autowire TelegramWebhook $webhook используется явное подключение вебхука через конфиги
     // для того чтобы можно было переопределить повидение телеграм бота
@@ -30,13 +35,12 @@ class TelegramController extends AbstractController
      * Тот самый WebHook (точка доступа) за которую будет дергать Телеграм когда надо будет реагировать на пользователя в чате
      * @param TelegramHelper $telegram
      * @param Request $request
-     * @param $webhook
      * @return JsonResponse
      */
     #[Route('/telegram/webhook', name: 'jc_telegram_webhook')]
     //public function telegram_webhook(TelegramHelper $telegram, Request $request, ParameterBagInterface $services_params){
-    public function telegram_webhook(TelegramHelper $telegram, Request $request){
-
+    public function telegram_webhook(TelegramHelper $telegram, Request $request): JsonResponse{
+        $this->telegram = $telegram;
         $webhook = $this->webhook;
 
         // Аутентификация у нас по токену в get параметре
@@ -304,7 +308,7 @@ class TelegramController extends AbstractController
                     } else {
                         // Нет пользователя этого прям не может быть,
                         // то есть боту не должен приходить запрос от неидентифицированных источников, игнорим
-                        $result = array("result" => "no_user");
+                        $result = array("result" => "request error: no_user");
                     }
                 }else{
                     $result = array("result" => "no_mess, error incoming structure");
@@ -330,7 +334,10 @@ class TelegramController extends AbstractController
     }
 
     private function log($mixed){
-        file_put_contents(__DIR__."/../../var/log/telegram.txt", (is_array($mixed)||is_object($mixed)?var_export($mixed, true):$mixed)."\r\n", FILE_APPEND);
+        if ($this->telegram->config['webhook_logging_turn_on']) {
+            $application_path = $this->getParameter('kernel.project_dir');
+            file_put_contents($application_path . "/var/log/telegram.txt", (is_array($mixed) || is_object($mixed) ? var_export($mixed, true) : $mixed) . "\r\n", FILE_APPEND);
+        }
     }
 
 }

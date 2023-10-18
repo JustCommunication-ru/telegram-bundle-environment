@@ -2,8 +2,11 @@
 
 namespace JustCommunication\TelegramBundle\Command;
 
+use Exception;
+use Generator;
 use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
+use JustCommunication\TelegramBundle\Repository\TelegramUserEventRepository;
 use JustCommunication\TelegramBundle\Service\TelegramHelper;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -22,6 +25,7 @@ class TelegramCommand extends Command
     private KernelInterface $kernel;
     private TelegramUserRepository $telegramUserRepository;
     private TelegramEventRepository $telegramEventRepository;
+    private TelegramUserEventRepository $telegramUserEventRepository;
     private UrlGeneratorInterface $router;
     private InputInterface $input;
 
@@ -30,8 +34,8 @@ class TelegramCommand extends Command
                                 KernelInterface $kernel,
                                 TelegramUserRepository $telegramUserRepository,
                                 TelegramEventRepository $telegramEventRepository,
+                                TelegramUserEventRepository $telegramUserEventRepository,
                                 UrlGeneratorInterface $router
-
     )
     {
         parent::__construct();
@@ -40,6 +44,7 @@ class TelegramCommand extends Command
         $this->kernel = $kernel;
         $this->telegramUserRepository = $telegramUserRepository;
         $this->telegramEventRepository = $telegramEventRepository;
+        $this->telegramUserEventRepository = $telegramUserEventRepository;
 
         //$this->curl = $client;
         $this->router = $router;
@@ -159,9 +164,10 @@ class TelegramCommand extends Command
                     }
                 }
                 if ($success_send>0){
-                    $this->io->success('Send success ('.$success_send.'/'.count($res_arr).'), message_id: '.$res['result']['message_id']);
+                    //$this->io->success('Send success ('.$success_send.'/'.count($res_arr).'), message_id: '.$res['result']['message_id']);
+                    $this->io->success('Send success ('.$success_send.'/'.count($res_arr).')');
                 }else{
-                    $this->io->error(['Send all fail', json_encode($res)]);
+                    $this->io->error(['Send all fail'. count($res_arr)]);
                 }
 
             }else{
@@ -179,7 +185,7 @@ class TelegramCommand extends Command
 
         }elseif ($input->getOption('delWebhook')) {
             $this->io->info('Action: delWebhook');
-            $row = $this->telegram->delWebhook();
+            $this->telegram->delWebhook();
             $this->io->success('end');
 
         }elseif ($input->getOption('getUpdates')) {
@@ -299,14 +305,13 @@ class TelegramCommand extends Command
     }
 
 
-
     /**
      * Пошаговая проверка/настройка конфигов телеграма в виде генератора
-     * @return \Generator
+     * @return Generator
+     * @throws Exception
      */
-    private function telegramInit(){
-
-        $webhook_url_path = $this->router->generate('jc_telegram_webhook');
+    private function telegramInit(): Generator
+    {
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// 1) проверка админа
@@ -480,7 +485,7 @@ class TelegramCommand extends Command
                 }
 
             }else{
-                $this->io->caution(['Warning: user with role = ROLE_SUPERUSER not found in table "user".']);
+                $this->io->caution(['Warning: user with role = ROLE_SUPERUSER not found in table "user". Create one! In case of manual use security:hash-password']);
                 $all_is_good_go_on_dude=false;
             }
         }
@@ -496,7 +501,7 @@ class TelegramCommand extends Command
         $list = $this->telegram->getUserEvents($admin_chat_id);
 
 
-        $__changes = ['Subscribe admin for all events. Table "'."'.$this->telegramUserEventRepository->getTableName().'".'" update successfuly:'];
+        $__changes = ['Subscribe admin for all events. Table "'.$this->telegramUserEventRepository->getTableName().'" update successfuly:'];
         foreach ($preset as $item){
             $name = $item['name'];
             if (isset($list[$name])){
@@ -544,7 +549,7 @@ class TelegramCommand extends Command
         $admin_chat_id = (int)$this->telegram->config["admin_chat_id"];
         $webhook_url_path = $this->router->generate('jc_telegram_webhook');
 
-        $paramaters = array_merge(array(
+        $paramaters = array_merge_recursive(array(
             'update_id' => 1,
             'message' => array(
                 'message_id' => 1,
@@ -591,7 +596,7 @@ class TelegramCommand extends Command
             $this->io->block('Found '.count($arr).' available commands: '.implode(', ', $arr));
 
             foreach ($arr as $command){
-                $res = $this->telegram->sendMessage($admin_chat_id, '/' . $command);
+                $this->telegram->sendMessage($admin_chat_id, '/' . $command);
                 $act_res = $this->sendMessageToLocalWebhook('/' . $command);
                 $this->io->block('/' . $command . ' sended (' . ($act_res&&$act_res['result']=='ok' ? 'success' : 'fail') . ')');
             }

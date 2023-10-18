@@ -15,6 +15,8 @@ telegram:
     wrong_event_exception: true # ронять скрипты при попытке отправить несуществующий event, можно считать эту опцию strict mode
     markdown_checker: true # форматирование сообщения (умное исправление markdown и т.д. мероприятия нацеленные на 100% доставку сообщения)
     length_checker: false # обрезание по длине
+    webhook_logging_turn_on: true # log in /var/cache/telegram.txt
+    user_entity_class: 'App\Entity\User' # Сущность пользователей в системе
   events:
     - {name: "Error", note: "Подписка на ошибки сервера", roles: ["Superuser"]}
     - {name: "News", note: "Событие для примера, например всем доступные новости проекта", roles: ["User"]}

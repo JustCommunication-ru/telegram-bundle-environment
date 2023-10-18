@@ -12,52 +12,6 @@ class Configuration implements ConfigurationInterface
     {
         // TODO: Implement getConfigTreeBuilder() method.
         $treeBuilder = new TreeBuilder('telegram');
-/*
-        $treeBuilder->getRootNode()
-
-            
-
-            ->children()
-                ->booleanNode('auto_connect')
-                ->defaultTrue()
-                ->end()
-                ->scalarNode('default_connection')
-                ->defaultValue('default')
-                ->end()
-
-                ->arrayNode('config')
-                    //->useAttributeAsKey('name')
-                    //->arrayPrototype()
-                    ->children()
-                        ->scalarNode('table')
-                        ->end()
-
-
-                        //->scalarNode('admin_chat_id')
-                            ->variableNode('admin_chat_id')
-                        //->isRequired()
-                        ->info('Telegram chat id of special super admin user')
-                        ->end()
-
-            ->scalarNode('message_prefix')
-            ->info('Telegram chat id of special admin user')
-            ->end()
-
-
-                    ->end()
-                ->end()
-
-            ->end()
-*/
-/*
-            ->arrayPrototype()
-            ->children()
-            ->scalarNode('table')->end()
-            ->scalarNode('user')->end()
-            ->scalarNode('password')->end()
-            */
-        ;
-
 
 
         $treeBuilder->getRootNode()
@@ -108,6 +62,11 @@ class Configuration implements ConfigurationInterface
                             ->defaultValue('%env(APP_URL)%')
                         ->end()
 
+                        ->scalarNode('app_name')
+                            ->info('project name, by default it is "%env(APP_NAME)%"')
+                            ->defaultValue('%env(APP_NAME)%')
+                        ->end()
+
                         ->scalarNode('production_webhook_app_url')
                             ->info('real URL of your project in www. Used in bin/console app:telegram --init')
                             ->defaultValue('')
@@ -127,7 +86,14 @@ class Configuration implements ConfigurationInterface
                             ->info('Cut to much long messages')
                             ->defaultTrue()
                         ->end()
-
+                        ->booleanNode('webhook_logging_turn_on')
+                            ->info('Save webhook processing file log in /var/cache/telegram.txt')
+                            ->defaultTrue()
+                        ->end()
+                        ->scalarNode('user_entity_class')
+                            ->info('fully qualified classname of User Entity')
+                            ->defaultTrue()
+                        ->end()
                     ->end()
                 ->end()
                 ->arrayNode('events')

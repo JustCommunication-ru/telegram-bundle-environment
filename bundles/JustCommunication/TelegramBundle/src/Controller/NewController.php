@@ -52,7 +52,8 @@ class NewController extends AbstractController{
         //$x = $telegramHelper->getUserEvent(537830154, "Error");
 
 
-
+        //$x = $telegramHelper->getUsers(true);
+        //var_dump($x);
         //$x = $eventRepository->findAll();
 
 

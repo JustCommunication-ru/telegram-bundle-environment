@@ -57,7 +57,8 @@ php vendor/bin/simple-phpunit tests
 
 
 # ДОРАБОТАТЬ
-@todo вынести в отдельные бандлы:
-- CacheHelper
-- SmsAeroHelper
-- RedisHelper
+
+* @todo Логику общения с пользователем надо тоже вынести из контроллера в вебхук, тут оставить только передачу параметров и вывод ответа
+* @todo *Comand методы должны возвращать строго строку
+* @todo WebhookInterface придумать
+* @todo сделать таблицу emoji констант

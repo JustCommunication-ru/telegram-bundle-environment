@@ -2,6 +2,7 @@
 
 namespace JustCommunication\TelegramBundle\Service;
 
+use Exception;
 use JustCommunication\TelegramBundle\Repository\TelegramEventRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramMessageRepository;
 use JustCommunication\TelegramBundle\Repository\TelegramSaveRepository;
@@ -11,6 +12,7 @@ use JustCommunication\TelegramBundle\Repository\TelegramUserRepository;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Throwable;
 
 
 /**
@@ -24,20 +26,18 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  */
 class TelegramHelper
 {
-    public $db;
-    public $config;
-    public $cache;
-    public $logger;
+    public array $config;
+    public LoggerInterface $logger;
     public TelegramEventRepository $telegramEventRepository;
     public TelegramSaveRepository $telegramSaveRepository;
     public TelegramUserRepository $telegramUserRepository;
     public TelegramUserEventRepository $telegramUserEventRepository;
     public TelegramMessageRepository $telegramMessageRepository;
-    public $em;
 
-    //public $add_reply_emoji="\xE2\x9C\x85 "; //WHITE SMALL SQUARE
-    //public $add_reply_emoji="\xE2\x96\xAB "; //WHITE SMALL SQUARE
-    public $add_reply_emoji="\xE2\x9A\xA1 "; // 	HIGH VOLTAGE SIGN
+    const EMOJI_ADD_REPLY = "\xE2\x9A\xA1 ";
+    // "\xE2\x96\xAB ";  // WHITE SMALL SQUARE
+    // "\xE2\x9C\x85 ";  // WHITE SMALL SQUARE
+
 
     /**
      * Сюда из вызываемого класса можно передать обработчик для вывода информации.
@@ -47,7 +47,7 @@ class TelegramHelper
 
     private UrlGeneratorInterface $router;
 
-    public function __construct(ParameterBagInterface $params,LoggerInterface $logger,
+    public function __construct(ParameterBagInterface $params, LoggerInterface $logger,
                                 TelegramEventRepository $telegramEventRepository,
                                 TelegramSaveRepository $telegramSaveRepository,
                                 TelegramUserRepository $telegramUserRepository,
@@ -61,7 +61,7 @@ class TelegramHelper
             $this->events = $params->get("justcommunication.telegram.events");
 
             if (!$this->config['token']){
-                throw new \Exception('Telegram token const not set in .env.local [JC_TELEGRAM_TOKEN]', 1);
+                throw new Exception('Telegram token const not set in .env.local [JC_TELEGRAM_TOKEN]', 1);
             }
             $this->logger = $logger;
 
@@ -71,10 +71,10 @@ class TelegramHelper
             $this->telegramUserEventRepository = $telegramUserEventRepository;
             $this->telegramMessageRepository = $telegramMessageRepository;
             $this->router = $router;
-        }catch (\Exception $exception){
+        }catch (Throwable $exception){
             // Если запускать jc:telegram:install, то пытаются завестить другие command а они требуют хелпера, а хелпер требует конфиги. и сообщения вводят в заблуждение
             // С другой стороны если без установки попытаться воспользоваться функционалом сыпятся непонятные ошибки из-за закоментированного ниже кода
-            //throw new \Exception("You need to set config justcommunication.telegram.config, do it manualy or run jc:telegram:install");
+            //throw new Exception("You need to set config justcommunication.telegram.config, do it manualy or run jc:telegram:install");
         }
 
     }
@@ -117,7 +117,7 @@ class TelegramHelper
 
     /**
      * Отключение обработчка входящих сообщений
-     * @return array|mixed
+     * @return array
      */
     public function delWebhook(){
         return $this->query('deleteWebhook', array());
@@ -125,14 +125,14 @@ class TelegramHelper
 
     /**
      * Если отсутствует привязанный вебхук, то за сообщениями надо лазить самому. с помощью вот этой вот функции
-     * @return array|mixed
+     * @return array
      */
     public function getUpdates(){
         return $this->query('getUpdates', array());
     }
 
     /**
-     * @return bool
+     * @return array
      */
     public function  getWebhookInfo(){
         return $this->query('getWebhookInfo');
@@ -187,8 +187,8 @@ class TelegramHelper
      * @param bool $fix_postfix
      * @return string|string[]
      */
-    private function markdown_checker($str, $fix=false, $fix_postfix=false){
-        $origin_str = $str;
+    private function markdown_checker($str, bool $fix=false, bool $fix_postfix=false){
+        //$origin_str = $str;
         $res =  [];
         $shift = 0;
 
@@ -308,7 +308,7 @@ dd([$origin_str, array_map(function($item) {
      * @return mixed
      */
     //public function  sendMessage(int $chat_id, string $text, $entities= []): array{
-    public function  sendMessage(int $chat_id, string $mess, $params=[]): array{
+    public function  sendMessage(int $chat_id, string $mess, array $params=[]): array{
         $teleSave = null;
         if (isset($params['load_id'])){
             $teleSave = $this->telegramSaveRepository->findOneBy(['ident'=>$params['load_id'], 'userChatId'=>$chat_id]);
@@ -318,9 +318,9 @@ dd([$origin_str, array_map(function($item) {
         if ($teleSave && isset($params['add_text']) && $params['add_text']!=''){
             // Изменяем начальное сообщение
 
-            $teleSave = $this->telegramSaveRepository->updateMess($teleSave, $teleSave->getMess()."\r\n".$this->add_reply_emoji.$params['add_text']);
+            $teleSave = $this->telegramSaveRepository->updateMess($teleSave, $teleSave->getMess()."\r\n".self::EMOJI_ADD_REPLY.$params['add_text']);
 
-            $pre_ans = $this->sendMess($chat_id, [
+            $this->sendMess($chat_id, [
                 'message_id'=>$teleSave->getMessageId(),
                 'text'=>$teleSave->getMess()
             ], 'editMessageText');
@@ -374,9 +374,11 @@ dd([$origin_str, array_map(function($item) {
      * Осуществить рассылку по эвенту, сообщение с переносом строк
      * @param string $event
      * @param string $mess
+     * @param array $params
      * @return array
+     * @throws Exception
      */
-    public function event(string $event, string $mess, $params=[]): array{
+    public function event(string $event, string $mess, array $params=[]): array{
 
 //        $mess = '``` '.$event.'```'."\r\n".$mess;
 //        $mess .= "\r\n".'/remove'.$event.' - отписаться от рассылки';
@@ -386,7 +388,7 @@ dd([$origin_str, array_map(function($item) {
 
         // Будем ронять скрипт если попытались отправить несуществующий евент, а у нас strict mode
         if (!array_key_exists($event, $this->getEvents()) && $this->config['wrong_event_exception']) {
-            throw new \Exception('Event "'.$event.'" not found, try app:telegram --init for repair');
+            throw new Exception('Event "'.$event.'" not found, try app:telegram --init for repair');
         }
 
         //wrong_event_exception
@@ -395,7 +397,7 @@ dd([$origin_str, array_map(function($item) {
         // повышаем живучесть механизма, если слетела базка, отправляем весточку админу!
         try {
             $subscriber_ids = $this->telegramUserEventRepository->getEventUserIds($event);
-        }catch (\Exception $e){
+        }catch (Throwable $e){
             $mess = '*Ошибка рассылки сообщений!*'."\r\n".'Запрос подписчиков на событие '.$event.' провалился с исключением: ``` '.$e->getMessage().'```'."\r\n\r\n".$mess;
             $subscriber_ids = [$this->getAdminChatId()];
         }
@@ -436,8 +438,8 @@ dd([$origin_str, array_map(function($item) {
                     if (isset($teleSavesMap[$user_id]) && isset($params['add_text']) && $params['add_text']!=''){
                         // Изменяем начальное сообщение
                         //$teleSavesMap[$user_id]->setMess($teleSavesMap[$user_id]->getMess()."\r\n[__________________________________]\r\n".$params['add_text']);
-                        $teleSavesMap[$user_id] = $this->telegramSaveRepository->updateMess($teleSavesMap[$user_id], $teleSavesMap[$user_id]->getMess()."\r\n".$this->add_reply_emoji.$params['add_text']);
-                        $pre_ans = $this->sendMess($user_id, array_merge($data, [
+                        $teleSavesMap[$user_id] = $this->telegramSaveRepository->updateMess($teleSavesMap[$user_id], $teleSavesMap[$user_id]->getMess()."\r\n".self::EMOJI_ADD_REPLY.$params['add_text']);
+                        $this->sendMess($user_id, array_merge($data, [
                             'message_id'=>$teleSavesMap[$user_id]->getMessageId(),
                             'text'=>$teleSavesMap[$user_id]->getMess()
                         ]), 'editMessageText');
@@ -485,9 +487,9 @@ dd([$origin_str, array_map(function($item) {
      * @param string $method
      * @param array $params
      * @param bool $cut_mode Задача, если не удалось отправить сообщение, то отправляем урезанную версию без форматирования тому же получателю
-     * @return array|mixed
+     * @return array
      */
-    private function query(string $method, $params=array(), $cut_mode=false): array{
+    private function query(string $method, array $params=array(), bool $cut_mode=false): array{
 
         $url = $this->config['url'];
         $url .=$this->config['token'];
@@ -533,7 +535,7 @@ dd([$origin_str, array_map(function($item) {
         }
         $result = curl_exec($ch);
         $info = curl_getinfo($ch);
-        $info['curl_errno']=(int)curl_errno($ch);
+        $info['curl_errno']=curl_errno($ch);
         $info['curl_error']=curl_error($ch);
 
         curl_close($ch);
@@ -562,13 +564,10 @@ dd([$origin_str, array_map(function($item) {
                 $this->logger->warning('message too long, try to resend cutted');
                 $this->last_ans = $this->query($method, array_merge($params, array('text'=>$text)), true); // игнорируем ответ от этой функции?
             }
-            //echo $result;
-            return $this->last_ans;
         }else{
             //print_r($info);
-            $this->logger->warning(''.__CLASS__.'->'.__FUNCTION__.'() execute error '.$info['curl_errno'].':'.$info['curl_error']);
+            $this->logger->warning(__CLASS__.'->'.__FUNCTION__.'() execute error '.$info['curl_errno'].':'.$info['curl_error']);
             $this->last_ans = $info; // тут можно упихать info
-            //echo $result;
 
             /*
             file_put_contents(__DIR__."/../../var/log/telegram_fails.txt",
@@ -579,9 +578,8 @@ dd([$origin_str, array_map(function($item) {
                 'ans: '."\r\n".
                 print_r($this->last_ans, true));
             */
-
-            return $this->last_ans;
         }
+        return $this->last_ans;
     }
 
 
@@ -604,7 +602,7 @@ dd([$origin_str, array_map(function($item) {
      */
     public function  emoji($text){
         $pattern = '@\\\x([0-9a-fA-F]{2})@x';
-        return $emoji = preg_replace_callback(
+        return preg_replace_callback(
             $pattern,
             function ($captures){
                 return chr(hexdec($captures[1]));
@@ -630,6 +628,18 @@ dd([$origin_str, array_map(function($item) {
 
     public function findProjectUserByPhone($phone){
         return $this->telegramUserRepository->findProjectUserByPhone($phone);
+    }
+
+    /**
+     * По идее если есть номер телефона в таблице телеграм-юзеров, значит есть привязка к пользователям, так ведь?
+     * А значит проще искать по номеу пользователя
+     * @param $phone
+     * @return \JustCommunication\TelegramBundle\Entity\TelegramUser|null
+     */
+    public function findByPhone($phone){
+        $phone = str_replace('+', '', $phone);
+        // может и 8 преобразовывать в 7 ??
+        return $this->telegramUserRepository->findOneBy(['phone'=>$phone]);
     }
 
     public function findProjectUserBySuperuser(){
@@ -681,7 +691,6 @@ dd([$origin_str, array_map(function($item) {
         $this->telegramUserRepository->setUserPhone($user_chat_id, $phone);
     }
 
-    //public function setUser($user_chat_id, $id_user, $phone=''){
     public function linkUser($user_chat_id, $id_user, $phone=''){
         $this->telegramUserRepository->linkUser($user_chat_id, $id_user, $phone='');
     }

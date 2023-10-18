@@ -7,7 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * TelegramUsers
  * Пользователи канала которые проявили хоть какую-нибудь активность
- * @ORM\Table(name="telegram_user", indexes={@ORM\Index(name="chats", columns={"user_chat_id"})})
+ * @ORM\Table(name="telegram_user", indexes={@ORM\Index(name="chats", columns={"user_chat_id"}), @ORM\Index(name="user", columns={"id_user"}), @ORM\Index(name="phone", columns={"phone"})})
  * @ORM\Entity
  */
 class TelegramUser
