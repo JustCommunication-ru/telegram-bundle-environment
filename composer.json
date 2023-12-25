@@ -1,5 +1,5 @@
 {
-    "name": "justcommunication/telegram-bundle-environment",
+    "name": "justcommunication-ru/telegram-bundle-environment",
     "description": "Telegram sdk",
     "type": "project",
     "keywords": ["telegram","messages","notification"],
@@ -14,10 +14,10 @@
         "doctrine/doctrine-bundle": "^2.9",
         "doctrine/doctrine-migrations-bundle": "^3.2",
         "doctrine/orm": "^2.15",
-        "justcommunication/cache-bundle": "^0.0.1",
-        "justcommunication/func-bundle": "^0.0.1",
-        "justcommunication/smsaero-bundle": "*",
-        "justcommunication/telegram-bundle": "^0.0.1",
+        "justcommunication-ru/cache-bundle": "^0.0.1",
+        "justcommunication-ru/func-bundle": "^0.0.1",
+        "justcommunication-ru/smsaero-bundle": "*",
+        "justcommunication-ru/telegram-bundle": "^0.0.1",
         "predis/predis": "^2.1",
         "symfony/console": "6.3.*",
         "symfony/dotenv": "6.3.*",
@@ -32,20 +32,20 @@
     },
     "repositories": [
         {
-            "type": "path",
-            "url":  "./bundles/JustCommunication/TelegramBundle"
+            "type": "vcs",
+            "url":  "git@github.com:JustCommunication-ru/telegram-bundle.git"
         },
         {
-            "type": "path",
-            "url":  "./bundles/JustCommunication/CacheBundle"
+            "type": "vcs",
+            "url":  "git@github.com:JustCommunication-ru/cache-bundle.git"
         },
         {
-            "type": "path",
-            "url":  "./bundles/JustCommunication/FuncBundle"
+            "type": "vcs",
+            "url":  "git@github.com:JustCommunication-ru/func-bundle.git"
         },
         {
-            "type": "path",
-            "url":  "./bundles/JustCommunication/SmsAeroBundle"
+            "type": "vcs",
+            "url":  "git@github.com:JustCommunication-ru/smsaero-bundle.git"
         }
     ],
     "config": {
